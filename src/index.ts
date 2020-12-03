@@ -1,33 +1,91 @@
 /* eslint-disable max-classes-per-file */
+export type Key = string | symbol;
+export type Dependencies = Record<Key, any>;
 
-type Dependencies = Record<string | symbol, any>;
+export type UnionToIntersection<U> = (
+	U extends any ? (k: U) => void : never
+) extends (k: infer I) => void
+	? I
+	: never;
 
+export type ResolvedDeps<
+	T extends Container<any, any, any>
+> = T extends Container<any, any, infer D> ? D : never;
+
+export type ValueOfContainer<
+	T extends Container<any, any, any>
+> = T extends Container<infer V, any, any> ? V : never;
+
+export type FlatDependenciesUnion<
+	Deps extends Record<Key, Container<any, any, any>>
+> = [keyof Deps] extends [never]
+	? {}
+	: {
+			[K in keyof Deps]: { [KK in K]: ValueOfContainer<Deps[K]> } &
+				FlatDependenciesUnion<ResolvedDeps<Deps[K]>>;
+	  }[keyof Deps];
+
+export type FlatDependencies<
+	Deps extends Record<Key, Container<any, any, any>>
+> = UnionToIntersection<FlatDependenciesUnion<Deps>>;
+
+type Resolve<MainType, Deps extends Record<Key, any>> = {
+	(): MainType;
+	<K extends keyof Deps>(key: K): Deps[K];
+};
+
+/** @todo Добавить иерархию */
+/** @todo Скрывать resolve, когда зависимости не определены */
 export type Container<
 	Type,
 	Deps extends Dependencies,
-	ResolvedDeps extends Dependencies
+	ResolvedDeps extends Record<Key, Container<any, any, any>>
 > = {
-	register<K extends keyof Deps>(
+	registerValue<K extends keyof Deps>(
 		key: K,
 		dep: Deps[K]
-	): Container<Type, Deps, ResolvedDeps & { [KK in K]: Deps[K] }>;
-	resolve: ResolvedDeps extends Deps ? () => Type : never;
+	): Container<
+		Type,
+		Deps,
+		ResolvedDeps & { [KK in K]: Container<Deps[K], {}, {}> }
+	>;
+	resolve: FlatDependencies<ResolvedDeps> extends Deps
+		? Resolve<Type, FlatDependencies<ResolvedDeps>>
+		: never;
 };
+
+export type MapTuple<T extends [...any[]], NewValue> = {
+	[I in keyof T]: NewValue;
+};
+
+export type CombineTuplesToMap<
+	T extends [...Key[]],
+	NewValues extends [...any[]]
+> = UnionToIntersection<
+	{
+		[I in keyof T]: T[I] extends Key
+			? {
+					[K in T[I]]: I extends keyof NewValues
+						? NewValues[I]
+						: never;
+			  }
+			: never;
+	}[number]
+>;
+
+type UnknownGuard<T> = T extends Dependencies ? T : never;
 
 export type OfClass = {
 	<T>(c: { new (): T }): Container<T, {}, {}>;
-	<T, P1, K1 extends string | symbol>(
-		c: { new (p1: P1): T },
-		k1: K1
-	): Container<T, { [P in K1]: P1 }, {}>;
-	<T, P1, K1 extends string | symbol, P2, K2 extends string | symbol>(
-		c: { new (p1: P1, p2: P2): T },
-		k1: K1,
-		k2: K2
-	): Container<T, { [P in K1]: P1 } & { [P in K2]: P2 }, {}>;
+	<Params extends [...any[]], T, Keys extends MapTuple<Params, Key>>(
+		c: { new (...args: Params): T },
+		...keys: Keys
+	): Container<T, UnknownGuard<CombineTuplesToMap<Keys, Params>>, {}>;
 };
 
 export const ofClass: OfClass = () => null as any;
+
+// --------------------------------------------------------
 
 class C0 {}
 class C1 {
@@ -37,12 +95,24 @@ class C2 {
 	constructor(public p1: string, public p2: number) {}
 }
 
+type Args = ConstructorParameters<typeof C2>;
+
+type Tuple = [number, boolean];
+
+type TupleElement = Tuple[1];
+
+type MapTupleTest = MapTuple<Tuple, string>;
+
+type Map2TupleTest = CombineTuplesToMap<['dep1', 'dep2'], [string, number]>;
+
 export const a0 = ofClass(C0);
 export const a1 = ofClass(C1, 'myDep');
-a1.register('myDep', 'sfd').resolve();
+a1.registerValue('myDep', 'sfd').resolve();
 
 export const a2 = ofClass(C2, 'myDep', 'p2Dep');
-export const aa2 = a2.register('myDep', 'myStringValue').register('p2Dep', 123);
+export const aa2 = a2
+	.registerValue('myDep', 'myStringValue')
+	.registerValue('p2Dep', 123);
 
 class A {
 	constructor(public p1: string, public p2: number) {}
@@ -70,19 +140,60 @@ type Norm = Normalize<NonN>;
 
 // ---------------------------------------------------
 
-export type AA = {
-	[key: string]: Record<string, number>;
-};
+// export type Element<Children extends Record<string, Element<any>>> = {
+// 	children: Children;
+// };
 
-type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
-	k: infer I
-) => void
-	? I
-	: never;
+// type Flat<T extends AA> = UnionToIntersection<{
+// 	[K in keyof T]: T[K] extends AA ? Flat<T[K]> : T[K]
+// }>;
 
-type Flat<T extends AA> = UnionToIntersection<T[keyof T]>;
+// type Flat<T extends Element<any>> = UnionToIntersection<T[keyof T]>;
+// type Flat<T extends AA> = T[keyof T];
 
-type FlatRec = Flat<{
-	myRec1: { value1: 12; value2: 345 };
-	myRec2: { value3: 5354345 };
-}>;
+// type Flat<T extends AA> = {
+// 	[K in keyof T]: T[K] extends AA ? Flat<T[K]> : T[K]
+// };
+
+// type FlatRec = UnionToIntersection<Flat<{
+// 	myRec1: { value1: 12; child: { value2: 123, grandChild: {value25: 345345}} };
+// 	myRec2: { value3: 5354345 };
+// }>>;
+
+// type Flat<T extends Container<any, any, any>> = UnionToIntersection<T[keyof T]>;
+
+// type Flat<T extends Container<any, any, any>> = UnionToIntersection<{
+// 	[K in keyof ResolvedDeps<T>]: Flat<ResolvedDeps<T>[K]>;
+// }>;
+
+// type Flat<T extends Container<any, any, any>> = {
+// 	[K in keyof ResolvedDeps<T>]: Flat<ResolvedDeps<T>[K]>;
+// };
+
+type FlatRec = UnionToIntersection<
+	FlatDependenciesUnion<{
+		dep1: Container<
+			string,
+			{},
+			{
+				inner1: Container<{ inner1Value: number }, {}, {}>;
+				inner2: Container<
+					boolean,
+					{},
+					{
+						grandInner: Container<
+							{ grandInnerValue: string },
+							{},
+							{}
+						>;
+					}
+				>;
+			}
+		>;
+		dep2: Container<{ dep2Value: string }, {}, {}>;
+	}>
+>;
+
+declare const flatRec: FlatRec;
+
+// flatRec.
