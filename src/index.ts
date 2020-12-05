@@ -8,64 +8,96 @@ export type UnionToIntersection<U> = (
 	? I
 	: never;
 
-export type ResolvedDeps<
+export type RegisteredDepsOfContainer<
 	T extends Container<any, any, any>
 > = T extends Container<any, any, infer D> ? D : never;
+
+export type DepsOfContainer<
+	T extends Container<any, any, any>
+> = T extends Container<any, infer D, any> ? D : never;
 
 export type ValueOfContainer<
 	T extends Container<any, any, any>
 > = T extends Container<infer V, any, any> ? V : never;
 
-export type FlatResolvedDependenciesUnion<
+export type FlatDependenciesUnion<
+	Deps extends Record<Key, Container<any, any, any>>
+> = [keyof Deps] extends [never]
+	? {}
+	: {
+			[K in keyof Deps]: DepsOfContainer<Deps[K]> &
+				FlatDependenciesUnion<RegisteredDepsOfContainer<Deps[K]>>;
+	  }[keyof Deps];
+
+export type FlatDependencies<
+	Deps extends Record<Key, Container<any, any, any>>
+> = UnionToIntersection<FlatDependenciesUnion<Deps>>;
+
+export type FlatRegisteredDependenciesUnion<
 	Deps extends Record<Key, Container<any, any, any>>
 > = [keyof Deps] extends [never]
 	? {}
 	: {
 			[K in keyof Deps]: { [KK in K]: ValueOfContainer<Deps[K]> } &
-				FlatResolvedDependenciesUnion<ResolvedDeps<Deps[K]>>;
+				FlatRegisteredDependenciesUnion<
+					RegisteredDepsOfContainer<Deps[K]>
+				>;
 	  }[keyof Deps];
 
-export type FlatResolvedDependencies<
+export type FlatRegisteredDependencies<
 	Deps extends Record<Key, Container<any, any, any>>
-> = UnionToIntersection<FlatResolvedDependenciesUnion<Deps>>;
+> = UnionToIntersection<FlatRegisteredDependenciesUnion<Deps>>;
 
+export type NotRegisteredDependenciesError<
+	NotRegistered
+> = 'Not registered dependencies' & {
+	missingKeys?: NotRegistered;
+};
 export type Resolve<
 	MainType,
 	Deps extends Record<Key, any>,
-	ResolvedDeps extends Record<Key, Container<any, any, any>>,
-	FlatResolvedDeps
-> = FlatResolvedDeps extends Deps
+	RegisteredDeps extends Record<Key, Container<any, any, any>>,
+	FlatRegisteredDeps
+	/** @todo только необходимые зависимости, а не все добавленные */
+> = FlatRegisteredDeps extends Deps & FlatDependencies<RegisteredDeps>
 	? {
 			(): MainType;
 			/** @todo только доступные зависимости, а не все добавленные */
-			<K extends keyof FlatResolvedDeps>(key: K): FlatResolvedDeps[K];
+			<K extends keyof FlatRegisteredDeps>(key: K): FlatRegisteredDeps[K];
 	  }
-	: never;
+	: NotRegisteredDependenciesError<
+			Exclude<
+				keyof (Deps & FlatDependencies<RegisteredDeps>),
+				keyof FlatRegisteredDeps
+			>
+	  >;
 
-/** @todo Добавить иерархию */
-/** @todo Скрывать resolve, когда зависимости не определены */
+export type Register<
+	Type,
+	Deps extends Record<Key, any>,
+	RegisteredDeps extends Record<Key, Container<any, any, any>>,
+	FlatDeps
+> = <K extends keyof FlatDeps, Child extends Container<FlatDeps[K], any, any>>(
+	key: K,
+	child: Child
+) => Container<Type, Deps, RegisteredDeps & { [KK in K]: Child }>;
+
 export type Container<
 	Type,
 	Deps extends Dependencies,
-	ResolvedDeps extends Record<Key, Container<any, any, any>>
+	RegisteredDeps extends Record<Key, Container<any, any, any>>
 > = {
-	registerValue<K extends keyof Deps>(
-		key: K,
-		dep: Deps[K]
-	): Container<
+	register: Register<
 		Type,
 		Deps,
-		ResolvedDeps & { [KK in K]: Container<Deps[K], {}, {}> }
+		RegisteredDeps,
+		Deps & FlatDependencies<RegisteredDeps>
 	>;
-	register<K extends keyof Deps, Child extends Container<Deps[K], any, any>>(
-		key: K,
-		child: Child
-	): Container<Type, Deps, ResolvedDeps & { [KK in K]: Child }>;
 	resolve: Resolve<
 		Type,
 		Deps,
-		ResolvedDeps,
-		FlatResolvedDependencies<ResolvedDeps>
+		RegisteredDeps,
+		FlatRegisteredDependencies<RegisteredDeps>
 	>;
 };
 
@@ -100,6 +132,9 @@ export type OfClass = {
 
 export const ofClass: OfClass = () => null as any;
 
+export const ofValue = <T>(value: T) =>
+	(null as unknown) as Container<T, {}, {}>;
+
 // --------------------------------------------------------
 
 class C0 {}
@@ -122,12 +157,12 @@ type Map2TupleTest = CombineTuplesToMap<['dep1', 'dep2'], [string, number]>;
 
 export const a0 = ofClass(C0);
 export const a1 = ofClass(C1, 'myDep');
-a1.registerValue('myDep', 'sfd').resolve();
+a1.register('myDep', ofValue('sfd')).resolve();
 
 export const a2 = ofClass(C2, 'myDep', 'p2Dep');
 export const aa2 = a2
-	.registerValue('myDep', 'myStringValue')
-	.registerValue('p2Dep', 123);
+	.register('myDep', ofValue('myStringValue'))
+	.register('p2Dep', ofValue(123));
 
 class A {
 	constructor(public p1: string, public p2: number) {}
@@ -186,7 +221,7 @@ type Norm = Normalize<NonN>;
 // };
 
 type FlatRec = UnionToIntersection<
-	FlatResolvedDependenciesUnion<{
+	FlatRegisteredDependenciesUnion<{
 		dep1: Container<
 			string,
 			{},
@@ -212,3 +247,44 @@ type FlatRec = UnionToIntersection<
 declare const flatRec: FlatRec;
 
 // flatRec.
+
+type FlatDepsRec = FlatDependencies<{
+	dep1: Container<
+		string,
+		{
+			dep11: string;
+			dep12: number;
+		},
+		{
+			inner1: Container<
+				{ inner1Value: number },
+				{
+					innerDep11: boolean;
+				},
+				{}
+			>;
+			inner2: Container<
+				boolean,
+				{ innerDep12: number },
+				{
+					grandInner: Container<
+						{ grandInnerValue: string },
+						{ grandInner: string },
+						{}
+					>;
+				}
+			>;
+		}
+	>;
+	dep2: Container<
+		{ dep2Value: string },
+		{
+			dep22: { dep2Value: number };
+		},
+		{}
+	>;
+}>;
+
+declare const flatDepsRec: FlatDepsRec;
+
+// flatDepsRec.;
