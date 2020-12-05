@@ -1,4 +1,4 @@
-import { expectType, expectError } from 'tsd';
+import { expectType, expectError, expectNotType } from 'tsd';
 import { ofClass, Container } from '..';
 
 class C0 {}
@@ -59,3 +59,57 @@ export function ofClassTwoDepErrors() {
 	expectError(ofClass(C2, 'dep1'));
 	expectError(ofClass(C2, 'dep1', 'dep2', 'dep3'));
 }
+
+class C3 {
+	constructor(public c2: C2, public p2: number) {}
+}
+
+// export function ofClassChildrenDeps() {
+// 	const c2Container = ofClass(C2, 'c2Dep1', 'c2Dep2');
+// 	const c3Container = ofClass(C3, 'depC2', 'depP1');
+
+// 	expectType<never>(
+// 		c3Container
+// 			.register('depC2', c2Container.registerValue('c2Dep1', 'sdfsdf'))
+// 			.registerValue('depP1', 123).resolve
+// 	);
+
+// 	expectType<never>(
+// 		c3Container.register(
+// 			'depC2',
+// 			c2Container
+// 				.registerValue('c2Dep1', 'sdfsdf')
+// 				.registerValue('c2Dep2', 123)
+// 		).resolve
+// 	);
+
+// 	expectType<never>(
+// 		c3Container
+// 			.register('depC2', c2Container.registerValue('c2Dep1', 'sdfsdf'))
+// 			.registerValue('c2Dep2', 123).resolve
+// 	);
+
+// 	expectType<never>(
+// 		c3Container
+// 			.register('depC2', c2Container.registerValue('c2Dep1', 'sdfsdf'))
+// 			.registerValue('c2Dep2', 123).resolve
+// 	);
+
+// 	expectNotType<never>(
+// 		c3Container
+// 			.register('depC2', c2Container.registerValue('c2Dep1', 'sdfsdf'))
+// 			.registerValue('c2Dep2', 123)
+// 			.registerValue('depP1', 123).resolve
+// 	);
+
+// 	expectNotType<never>(
+// 		c3Container
+// 			.register(
+// 				'depC2',
+// 				c2Container
+// 					.registerValue('c2Dep1', 'sdfsdf')
+// 					.registerValue('c2Dep2', 123)
+// 			)
+// 			.registerValue('depP1', 123).resolve
+// 	);
+// }

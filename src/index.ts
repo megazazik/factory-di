@@ -16,23 +16,31 @@ export type ValueOfContainer<
 	T extends Container<any, any, any>
 > = T extends Container<infer V, any, any> ? V : never;
 
-export type FlatDependenciesUnion<
+export type FlatResolvedDependenciesUnion<
 	Deps extends Record<Key, Container<any, any, any>>
 > = [keyof Deps] extends [never]
 	? {}
 	: {
 			[K in keyof Deps]: { [KK in K]: ValueOfContainer<Deps[K]> } &
-				FlatDependenciesUnion<ResolvedDeps<Deps[K]>>;
+				FlatResolvedDependenciesUnion<ResolvedDeps<Deps[K]>>;
 	  }[keyof Deps];
 
-export type FlatDependencies<
+export type FlatResolvedDependencies<
 	Deps extends Record<Key, Container<any, any, any>>
-> = UnionToIntersection<FlatDependenciesUnion<Deps>>;
+> = UnionToIntersection<FlatResolvedDependenciesUnion<Deps>>;
 
-type Resolve<MainType, Deps extends Record<Key, any>> = {
-	(): MainType;
-	<K extends keyof Deps>(key: K): Deps[K];
-};
+export type Resolve<
+	MainType,
+	Deps extends Record<Key, any>,
+	ResolvedDeps extends Record<Key, Container<any, any, any>>,
+	FlatResolvedDeps
+> = FlatResolvedDeps extends Deps
+	? {
+			(): MainType;
+			/** @todo только доступные зависимости, а не все добавленные */
+			<K extends keyof FlatResolvedDeps>(key: K): FlatResolvedDeps[K];
+	  }
+	: never;
 
 /** @todo Добавить иерархию */
 /** @todo Скрывать resolve, когда зависимости не определены */
@@ -49,9 +57,16 @@ export type Container<
 		Deps,
 		ResolvedDeps & { [KK in K]: Container<Deps[K], {}, {}> }
 	>;
-	resolve: FlatDependencies<ResolvedDeps> extends Deps
-		? Resolve<Type, FlatDependencies<ResolvedDeps>>
-		: never;
+	register<K extends keyof Deps, Child extends Container<Deps[K], any, any>>(
+		key: K,
+		child: Child
+	): Container<Type, Deps, ResolvedDeps & { [KK in K]: Child }>;
+	resolve: Resolve<
+		Type,
+		Deps,
+		ResolvedDeps,
+		FlatResolvedDependencies<ResolvedDeps>
+	>;
 };
 
 export type MapTuple<T extends [...any[]], NewValue> = {
@@ -171,7 +186,7 @@ type Norm = Normalize<NonN>;
 // };
 
 type FlatRec = UnionToIntersection<
-	FlatDependenciesUnion<{
+	FlatResolvedDependenciesUnion<{
 		dep1: Container<
 			string,
 			{},
