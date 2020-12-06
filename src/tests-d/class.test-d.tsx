@@ -169,3 +169,81 @@ export function ofClassGrandChildrenDeps() {
 			.register('c2Dep2', ofValue(908)).resolve
 	);
 }
+
+class C5 {
+	constructor(public c3: C3, public c6: C6) {}
+}
+
+class C6 {
+	constructor(public c2: C2) {}
+}
+
+export function ofClassOverrideDeps() {
+	const c5Container = ofClass(C5, 'depC3', 'depC6');
+	const c6Container = ofClass(C6, 'depC2');
+	const c3Container = ofClass(C3, 'depC2', 'c3Number');
+
+	class C2Child extends C2 {
+		constructor() {
+			super('', 0);
+		}
+	}
+
+	expectNotAssignable<NotRegisteredDependenciesError<any>>(
+		c5Container
+			.register('depC3', c3Container)
+			.register('depC6', c6Container.register('depC2', ofClass(C2Child)))
+			.register('c3Number', ofValue(34)).resolve
+	);
+
+	expectNotAssignable<NotRegisteredDependenciesError<any>>(
+		c5Container
+			.register('depC3', c3Container)
+			.register('depC6', c6Container)
+			.register('c3Number', ofValue(34))
+			.register('depC2', ofClass(C2Child)).resolve
+	);
+
+	expectNotAssignable<NotRegisteredDependenciesError<any>>(
+		c5Container
+			.register(
+				'depC3',
+				c3Container.register(
+					'depC2',
+					ofClass(C2, 'c2String', 'c2Number')
+				)
+			)
+			.register('depC6', c6Container)
+			.register('c3Number', ofValue(34))
+			.register('depC2', ofClass(C2Child))
+			.register('c2Number', ofValue(123))
+			.register('c2String', ofValue('sdf')).resolve
+	);
+
+	expectType<NotRegisteredDependenciesError<'c2String' | 'c2Number'>>(
+		c5Container
+			.register(
+				'depC3',
+				c3Container.register(
+					'depC2',
+					ofClass(C2, 'c2String', 'c2Number')
+				)
+			)
+			.register('depC6', c6Container.register('depC2', ofClass(C2Child)))
+			.register('c3Number', ofValue(34)).resolve
+	);
+
+	// expectNotAssignable<NotRegisteredDependenciesError<any>>(
+	// 	c5Container
+	// 		.register(
+	// 			'depC3',
+	// 			c3Container.register(
+	// 				'depC2',
+	// 				ofClass(C2, 'c2String', 'c2Number')
+	// 			)
+	// 		)
+	// 		.register('depC6', c6Container)
+	// 		.register('depC2', ofClass(C2Child))
+	// 		.register('c3Number', ofValue(34)).resolve
+	// );
+}

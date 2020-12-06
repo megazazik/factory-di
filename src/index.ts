@@ -8,17 +8,21 @@ export type UnionToIntersection<U> = (
 	? I
 	: never;
 
-export type RegisteredDepsOfContainer<
-	T extends Container<any, any, any>
-> = T extends Container<any, any, infer D> ? D : never;
+export type RegisteredDepsOfContainer<T> = T extends Container<
+	any,
+	any,
+	infer D
+>
+	? D
+	: never;
 
-export type DepsOfContainer<
-	T extends Container<any, any, any>
-> = T extends Container<any, infer D, any> ? D : never;
+export type DepsOfContainer<T> = T extends Container<any, infer D, any>
+	? D
+	: never;
 
-export type ValueOfContainer<
-	T extends Container<any, any, any>
-> = T extends Container<infer V, any, any> ? V : never;
+export type ValueOfContainer<T> = T extends Container<infer V, any, any>
+	? V
+	: never;
 
 export type FlatDependenciesUnion<
 	Deps extends Record<Key, Container<any, any, any>>
@@ -53,23 +57,47 @@ export type NotRegisteredDependenciesError<
 > = 'Not registered dependencies' & {
 	missingKeys?: NotRegistered;
 };
+
+// export type RequiredDependenciesUnion<
+// 	RegisteredDeps extends Record<Key, Container<any, any, any>>
+// 	// AboveRegistered = keyof RegisteredDeps
+// > = [keyof RegisteredDeps] extends [never]
+// 	? {}
+// 	: {
+// 			[K in keyof RegisteredDeps]: DepsOfContainer<RegisteredDeps[K]> &
+// 				RequiredDependenciesUnion<
+// 					RegisteredDepsOfContainer<RegisteredDeps[K]>
+// 					// AboveRegistered
+// 				>;
+// 	  }[keyof RegisteredDeps];
+
+// export type RequiredDependencies<
+// 	RegisteredDeps extends Record<Key, Container<any, any, any>>
+// 	// AboveRegistered = keyof RegisteredDeps
+// > = UnionToIntersection<RequiredDependenciesUnion<RegisteredDeps>>;
+
+/** @todo только необходимые зависимости, а не все добавленные */
+export type RequiredDeps<
+	Deps extends Record<Key, any>,
+	RegisteredDeps extends Record<Key, Container<any, any, any>>
+	// > = Deps & UnionToIntersection<RequiredDependenciesUnion<RegisteredDeps>>;
+> = Deps & FlatDependencies<RegisteredDeps>;
+
 export type Resolve<
 	MainType,
-	Deps extends Record<Key, any>,
-	RegisteredDeps extends Record<Key, Container<any, any, any>>,
+	RequiredDeps,
 	FlatRegisteredDeps
-	/** @todo только необходимые зависимости, а не все добавленные */
-> = FlatRegisteredDeps extends Deps & FlatDependencies<RegisteredDeps>
+> = FlatRegisteredDeps extends RequiredDeps
 	? {
 			(): MainType;
-			/** @todo только доступные зависимости, а не все добавленные */
-			<K extends keyof FlatRegisteredDeps>(key: K): FlatRegisteredDeps[K];
+			/**
+			 * @todo только доступные зависимости, а не все добавленные
+			 * Написать тест на это
+			 */
+			<K extends keyof RequiredDeps>(key: K): FlatRegisteredDeps[K];
 	  }
 	: NotRegisteredDependenciesError<
-			Exclude<
-				keyof (Deps & FlatDependencies<RegisteredDeps>),
-				keyof FlatRegisteredDeps
-			>
+			Exclude<keyof RequiredDeps, keyof FlatRegisteredDeps>
 	  >;
 
 export type Register<
@@ -95,8 +123,7 @@ export type Container<
 	>;
 	resolve: Resolve<
 		Type,
-		Deps,
-		RegisteredDeps,
+		RequiredDeps<Deps, RegisteredDeps>,
 		FlatRegisteredDependencies<RegisteredDeps>
 	>;
 };
@@ -130,8 +157,10 @@ export type OfClass = {
 	): Container<T, UnknownGuard<CombineTuplesToMap<Keys, Params>>, {}>;
 };
 
+/** @todo написать реализацию */
 export const ofClass: OfClass = () => null as any;
 
+/** @todo написать реализацию */
 export const ofValue = <T>(value: T) =>
 	(null as unknown) as Container<T, {}, {}>;
 
@@ -288,3 +317,42 @@ type FlatDepsRec = FlatDependencies<{
 declare const flatDepsRec: FlatDepsRec;
 
 // flatDepsRec.;
+
+// type TopLevelRequiredDeps = FlatRegisteredDependenciesWithoutNested<{
+// 	dep1: Container<
+// 		string,
+// 		{
+// 			dep11: string;
+// 			dep12: number;
+// 		},
+// 		{
+// 			inner1: Container<
+// 				{ inner1Value: number },
+// 				{
+// 					innerDep11: boolean;
+// 				},
+// 				{}
+// 			>;
+// 			inner2: Container<
+// 				boolean,
+// 				{ innerDep12: number },
+// 				{
+// 					grandInner: Container<
+// 						{ grandInnerValue: string },
+// 						{ grandInner: string },
+// 						{}
+// 					>;
+// 				}
+// 			>;
+// 		}
+// 	>;
+// 	dep2: Container<
+// 		{ dep2Value: string },
+// 		{
+// 			dep22: { dep2Value: number };
+// 		},
+// 		{}
+// 	>;
+// }>;
+
+// declare const required: TopLevelRequiredDeps;
