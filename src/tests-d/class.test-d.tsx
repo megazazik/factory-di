@@ -1,9 +1,4 @@
-import {
-	expectType,
-	expectError,
-	expectNotType,
-	expectNotAssignable,
-} from 'tsd';
+import { expectType, expectError, expectNotAssignable } from 'tsd';
 import {
 	ofClass,
 	Container,
@@ -63,6 +58,7 @@ export function ofClassTwoDepNoRegistered() {
 	expectType<NotRegisteredDependenciesError<'dep1' | 'dep2'>>(
 		ofClass(C2, 'dep1', 'dep2').resolve
 	);
+
 	expectType<NotRegisteredDependenciesError<'dep1'>>(
 		ofClass(C2, 'dep1', 'dep2').register('dep2', ofValue(123)).resolve
 	);
@@ -233,17 +229,141 @@ export function ofClassOverrideDeps() {
 			.register('c3Number', ofValue(34)).resolve
 	);
 
-	// expectNotAssignable<NotRegisteredDependenciesError<any>>(
-	// 	c5Container
-	// 		.register(
-	// 			'depC3',
-	// 			c3Container.register(
-	// 				'depC2',
-	// 				ofClass(C2, 'c2String', 'c2Number')
-	// 			)
-	// 		)
-	// 		.register('depC6', c6Container)
-	// 		.register('depC2', ofClass(C2Child))
-	// 		.register('c3Number', ofValue(34)).resolve
-	// );
+	expectType<NotRegisteredDependenciesError<'c3Number'>>(
+		c5Container
+			.register(
+				'depC3',
+				c3Container.register(
+					'depC2',
+					ofClass(C2, 'c2String', 'c2Number')
+				)
+			)
+			.register('depC6', c6Container)
+			.register('depC2', ofClass(C2Child)).resolve
+	);
+
+	expectNotAssignable<NotRegisteredDependenciesError<any>>(
+		c5Container
+			.register(
+				'depC3',
+				c3Container.register(
+					'depC2',
+					ofClass(C2, 'c2String', 'c2Number')
+				)
+			)
+			.register('depC6', c6Container)
+			.register('depC2', ofClass(C2Child))
+			.register('c3Number', ofValue(34)).resolve
+	);
+}
+
+export function ofClassResolveAcceptableParams() {
+	const c5Container = ofClass(C5, 'depC3', 'depC6');
+	const c6Container = ofClass(C6, 'depC2');
+	const c3Container = ofClass(C3, 'depC2', 'c3Number');
+
+	class C2Child extends C2 {
+		constructor() {
+			super('', 0);
+		}
+	}
+
+	expectType<C2>(
+		c6Container.register('depC2', ofClass(C2Child)).resolve('depC2')
+	);
+
+	expectType<C2>(
+		c3Container
+			.register('depC2', ofClass(C2Child))
+			.register('c3Number', ofValue(123))
+			.resolve('depC2')
+	);
+
+	expectType<number>(
+		c3Container
+			.register('depC2', ofClass(C2Child))
+			.register('c3Number', ofValue(123))
+			.resolve('c3Number')
+	);
+
+	expectType<number>(
+		c5Container
+			.register(
+				'depC3',
+				c3Container.register(
+					'depC2',
+					ofClass(C2, 'c2String', 'c2Number').register(
+						'c2Number',
+						ofValue(123)
+					)
+				)
+			)
+			.register('depC6', c6Container)
+			.register('c3Number', ofValue(34))
+			.register('c2String', ofValue('sdf'))
+			.resolve('c2Number')
+	);
+
+	expectType<string>(
+		c5Container
+			.register(
+				'depC3',
+				c3Container.register(
+					'depC2',
+					ofClass(C2, 'c2String', 'c2Number').register(
+						'c2Number',
+						ofValue(123)
+					)
+				)
+			)
+			.register('depC6', c6Container)
+			.register('c3Number', ofValue(34))
+			.register('c2String', ofValue('sdf'))
+			.resolve('c2String')
+	);
+
+	expectError(
+		c5Container
+			.register(
+				'depC3',
+				c3Container.register(
+					'depC2',
+					ofClass(C2, 'c2String', 'c2Number')
+				)
+			)
+			.register('depC6', c6Container)
+			.register('depC2', ofClass(C2Child))
+			.register('c3Number', ofValue(34))
+			.resolve('c2String')
+	);
+
+	expectError(
+		c5Container
+			.register(
+				'depC3',
+				c3Container.register(
+					'depC2',
+					ofClass(C2, 'c2String', 'c2Number')
+				)
+			)
+			.register('depC6', c6Container)
+			.register('depC2', ofClass(C2Child))
+			.register('c3Number', ofValue(34))
+			.resolve('c2Number')
+	);
+
+	expectError(
+		c5Container
+			.register(
+				'depC3',
+				c3Container.register(
+					'depC2',
+					ofClass(C2, 'c2String', 'c2Number')
+				)
+			)
+			.register('depC6', c6Container)
+			.register('depC2', ofClass(C2Child))
+			.register('c3Number', ofValue(34))
+			.resolve('unknown')
+	);
 }

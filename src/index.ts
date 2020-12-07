@@ -1,56 +1,14 @@
 /* eslint-disable max-classes-per-file */
-export type Key = string | symbol;
-export type Dependencies = Record<Key, any>;
-
-export type UnionToIntersection<U> = (
-	U extends any ? (k: U) => void : never
-) extends (k: infer I) => void
-	? I
-	: never;
-
-export type RegisteredDepsOfContainer<T> = T extends Container<
-	any,
-	any,
-	infer D
->
-	? D
-	: never;
-
-export type DepsOfContainer<T> = T extends Container<any, infer D, any>
-	? D
-	: never;
-
-export type ValueOfContainer<T> = T extends Container<infer V, any, any>
-	? V
-	: never;
-
-export type FlatDependenciesUnion<
-	Deps extends Record<Key, Container<any, any, any>>
-> = [keyof Deps] extends [never]
-	? {}
-	: {
-			[K in keyof Deps]: DepsOfContainer<Deps[K]> &
-				FlatDependenciesUnion<RegisteredDepsOfContainer<Deps[K]>>;
-	  }[keyof Deps];
-
-export type FlatDependencies<
-	Deps extends Record<Key, Container<any, any, any>>
-> = UnionToIntersection<FlatDependenciesUnion<Deps>>;
-
-export type FlatRegisteredDependenciesUnion<
-	Deps extends Record<Key, Container<any, any, any>>
-> = [keyof Deps] extends [never]
-	? {}
-	: {
-			[K in keyof Deps]: { [KK in K]: ValueOfContainer<Deps[K]> } &
-				FlatRegisteredDependenciesUnion<
-					RegisteredDepsOfContainer<Deps[K]>
-				>;
-	  }[keyof Deps];
-
-export type FlatRegisteredDependencies<
-	Deps extends Record<Key, Container<any, any, any>>
-> = UnionToIntersection<FlatRegisteredDependenciesUnion<Deps>>;
+import {
+	Key,
+	ContainerData,
+	Dependencies,
+	UnionToIntersection,
+	FlatDependencies,
+	FlatRegisteredDependencies,
+	RequiredDepsOfContainer,
+	RequiredDependenciesUnion,
+} from './containerData';
 
 export type NotRegisteredDependenciesError<
 	NotRegistered
@@ -58,54 +16,39 @@ export type NotRegisteredDependenciesError<
 	missingKeys?: NotRegistered;
 };
 
-// export type RequiredDependenciesUnion<
-// 	RegisteredDeps extends Record<Key, Container<any, any, any>>
-// 	// AboveRegistered = keyof RegisteredDeps
-// > = [keyof RegisteredDeps] extends [never]
-// 	? {}
-// 	: {
-// 			[K in keyof RegisteredDeps]: DepsOfContainer<RegisteredDeps[K]> &
-// 				RequiredDependenciesUnion<
-// 					RegisteredDepsOfContainer<RegisteredDeps[K]>
-// 					// AboveRegistered
-// 				>;
-// 	  }[keyof RegisteredDeps];
-
-// export type RequiredDependencies<
-// 	RegisteredDeps extends Record<Key, Container<any, any, any>>
-// 	// AboveRegistered = keyof RegisteredDeps
-// > = UnionToIntersection<RequiredDependenciesUnion<RegisteredDeps>>;
-
-/** @todo только необходимые зависимости, а не все добавленные */
-export type RequiredDeps<
-	Deps extends Record<Key, any>,
-	RegisteredDeps extends Record<Key, Container<any, any, any>>
-	// > = Deps & UnionToIntersection<RequiredDependenciesUnion<RegisteredDeps>>;
-> = Deps & FlatDependencies<RegisteredDeps>;
-
 export type Resolve<
 	MainType,
-	RequiredDeps,
-	FlatRegisteredDeps
-> = FlatRegisteredDeps extends RequiredDeps
+	Deps,
+	RegisteredDeps extends Record<Key, ContainerData<any, any, any>>
+> = FlatRegisteredDependencies<RegisteredDeps> extends RequiredDepsOfContainer<
+	Deps,
+	RegisteredDeps
+>
 	? {
 			(): MainType;
-			/**
-			 * @todo только доступные зависимости, а не все добавленные
-			 * Написать тест на это
-			 */
-			<K extends keyof RequiredDeps>(key: K): FlatRegisteredDeps[K];
+			<K extends keyof RequiredDepsOfContainer<Deps, RegisteredDeps>>(
+				key: K
+			): RequiredDepsOfContainer<Deps, RegisteredDeps>[K];
 	  }
 	: NotRegisteredDependenciesError<
-			Exclude<keyof RequiredDeps, keyof FlatRegisteredDeps>
+			Exclude<
+				keyof RequiredDepsOfContainer<Deps, RegisteredDeps>,
+				keyof FlatRegisteredDependencies<RegisteredDeps>
+			>
 	  >;
 
 export type Register<
 	Type,
 	Deps extends Record<Key, any>,
-	RegisteredDeps extends Record<Key, Container<any, any, any>>,
-	FlatDeps
-> = <K extends keyof FlatDeps, Child extends Container<FlatDeps[K], any, any>>(
+	RegisteredDeps extends Record<Key, ContainerData<any, any, any>>
+> = <
+	K extends keyof (Deps & FlatDependencies<RegisteredDeps>),
+	Child extends ContainerData<
+		(Deps & FlatDependencies<RegisteredDeps>)[K],
+		any,
+		any
+	>
+>(
 	key: K,
 	child: Child
 ) => Container<Type, Deps, RegisteredDeps & { [KK in K]: Child }>;
@@ -113,19 +56,10 @@ export type Register<
 export type Container<
 	Type,
 	Deps extends Dependencies,
-	RegisteredDeps extends Record<Key, Container<any, any, any>>
-> = {
-	register: Register<
-		Type,
-		Deps,
-		RegisteredDeps,
-		Deps & FlatDependencies<RegisteredDeps>
-	>;
-	resolve: Resolve<
-		Type,
-		RequiredDeps<Deps, RegisteredDeps>,
-		FlatRegisteredDependencies<RegisteredDeps>
-	>;
+	RegisteredDeps extends Record<Key, ContainerData<any, any, any>>
+> = ContainerData<Type, Deps, RegisteredDeps> & {
+	register: Register<Type, Deps, RegisteredDeps>;
+	resolve: Resolve<Type, Deps, RegisteredDeps>;
 };
 
 export type MapTuple<T extends [...any[]], NewValue> = {
@@ -164,8 +98,10 @@ export const ofClass: OfClass = () => null as any;
 export const ofValue = <T>(value: T) =>
 	(null as unknown) as Container<T, {}, {}>;
 
-// --------------------------------------------------------
+/** @todo дописать проверку на добавление одинаковых ключей для зависимостей разных типов*/
 
+// --------------------------------------------------------
+/** @todo удалить все, что ниже */
 class C0 {}
 class C1 {
 	constructor(public p1: string) {}
@@ -249,54 +185,26 @@ type Norm = Normalize<NonN>;
 // 	[K in keyof ResolvedDeps<T>]: Flat<ResolvedDeps<T>[K]>;
 // };
 
-type FlatRec = UnionToIntersection<
-	FlatRegisteredDependenciesUnion<{
-		dep1: Container<
-			string,
-			{},
-			{
-				inner1: Container<{ inner1Value: number }, {}, {}>;
-				inner2: Container<
-					boolean,
-					{},
-					{
-						grandInner: Container<
-							{ grandInnerValue: string },
-							{},
-							{}
-						>;
-					}
-				>;
-			}
-		>;
-		dep2: Container<{ dep2Value: string }, {}, {}>;
-	}>
->;
-
-declare const flatRec: FlatRec;
-
-// flatRec.
-
 type FlatDepsRec = FlatDependencies<{
-	dep1: Container<
+	dep1: ContainerData<
 		string,
 		{
 			dep11: string;
 			dep12: number;
 		},
 		{
-			inner1: Container<
+			inner1: ContainerData<
 				{ inner1Value: number },
 				{
 					innerDep11: boolean;
 				},
 				{}
 			>;
-			inner2: Container<
+			inner2: ContainerData<
 				boolean,
 				{ innerDep12: number },
 				{
-					grandInner: Container<
+					grandInner: ContainerData<
 						{ grandInnerValue: string },
 						{ grandInner: string },
 						{}
@@ -305,7 +213,7 @@ type FlatDepsRec = FlatDependencies<{
 			>;
 		}
 	>;
-	dep2: Container<
+	dep2: ContainerData<
 		{ dep2Value: string },
 		{
 			dep22: { dep2Value: number };
@@ -318,41 +226,108 @@ declare const flatDepsRec: FlatDepsRec;
 
 // flatDepsRec.;
 
-// type TopLevelRequiredDeps = FlatRegisteredDependenciesWithoutNested<{
-// 	dep1: Container<
-// 		string,
-// 		{
-// 			dep11: string;
-// 			dep12: number;
-// 		},
-// 		{
-// 			inner1: Container<
-// 				{ inner1Value: number },
-// 				{
-// 					innerDep11: boolean;
-// 				},
-// 				{}
-// 			>;
-// 			inner2: Container<
-// 				boolean,
-// 				{ innerDep12: number },
-// 				{
-// 					grandInner: Container<
-// 						{ grandInnerValue: string },
-// 						{ grandInner: string },
-// 						{}
-// 					>;
-// 				}
-// 			>;
-// 		}
-// 	>;
-// 	dep2: Container<
-// 		{ dep2Value: string },
-// 		{
-// 			dep22: { dep2Value: number };
-// 		},
-// 		{}
-// 	>;
-// }>;
+type TopLevelRequiredDeps = RequiredDependenciesUnion<
+	{
+		dep1: string;
+		dep2: { dep2Value: string };
+	},
+	{
+		dep1: Container<
+			string,
+			{
+				dep11: string;
+				dep12: number;
+			},
+			{
+				inner1: Container<
+					{ inner1Value: number },
+					{
+						innerDep11: boolean;
+					},
+					{}
+				>;
+				inner2: Container<
+					boolean,
+					{ innerDep12: number },
+					{
+						grandInner: Container<
+							{ grandInnerValue: string },
+							{ grandInner: string },
+							{}
+						>;
+					}
+				>;
+			}
+		>;
+		dep2: Container<
+			{ dep2Value: string },
+			{
+				dep22: { dep2Value: number };
+			},
+			{}
+		>;
+	},
+	'inner1'
+	// never
+>;
 
-// declare const required: TopLevelRequiredDeps;
+declare const required: keyof UnionToIntersection<TopLevelRequiredDeps>;
+
+type ReqDeps = RequiredDepsOfContainer<
+	{
+		dep1: string;
+		dep2: { dep2Value: string };
+	},
+	{
+		dep1: Container<
+			string,
+			{
+				inner1: { inner1Value: number };
+				inner2: boolean;
+			},
+			{
+				// inner1: Container<
+				// 	{ inner1Value: number },
+				// 	{
+				// 		// innerDep11: boolean;
+				// 	},
+				// 	{}
+				// >;
+				inner2: Container<
+					boolean,
+					{ innerDep12: number },
+					{
+						grandInner: Container<
+							{ grandInnerValue: string },
+							{ grandInner: string },
+							{}
+						>;
+					}
+				>;
+			}
+		>;
+		// dep2: Container<
+		// 	{ dep2Value: string },
+		// 	{
+		// 		dep22: { dep2Value: number };
+		// 		inner2: boolean;
+		// 	},
+		// 	{}
+		// >;
+		inner2: Container<
+			boolean,
+			{
+				// dep22: { dep2Value: number };
+			},
+			{}
+		>;
+	}
+	// 'inner2'
+	// never
+>;
+
+declare const req: keyof ReqDeps;
+
+type TTT<T> = T[keyof T];
+
+type ttt = UnionToIntersection<TTT<{}> | { p1: 1 } | {}>;
