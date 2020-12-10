@@ -83,6 +83,30 @@ export type CombineTuplesToMap<
 
 type UnknownGuard<T> = T extends Dependencies ? T : never;
 
+function create<
+	Type,
+	Deps extends Dependencies,
+	RegisteredDeps extends Record<Key, ContainerData<any, any, any>>
+>(
+	containerData: ContainerData<Type, Deps, RegisteredDeps>
+): Container<Type, Deps, RegisteredDeps> {
+	return {
+		...containerData,
+		register: ((key, container) => {
+			return create({
+				...containerData,
+				registeredDeps: {
+					...containerData.registeredDeps,
+					[key]: container,
+				},
+			});
+		}) as Register<Type, Deps, RegisteredDeps>,
+		resolve: ((key?: string) => {
+			return containerData.getValue(() => null);
+		}) as Resolve<Type, Deps, RegisteredDeps>,
+	};
+}
+
 export type OfClass = {
 	<T>(c: { new (): T }): Container<T, {}, {}>;
 	<Params extends [...any[]], T, Keys extends MapTuple<Params, Key>>(
@@ -91,11 +115,26 @@ export type OfClass = {
 	): Container<T, UnknownGuard<CombineTuplesToMap<Keys, Params>>, {}>;
 };
 
-/** @todo написать реализацию */
-export const ofClass: OfClass = () => null as any;
+export const ofClass: OfClass = (Constructor: any, ...argNames: string[]) =>
+	create({
+		registeredDeps: {},
+		getValue: (resolve) => new Constructor(...argNames.map(resolve)),
+	});
+
+export const ofConstant = <T>(value: T) =>
+	create({
+		registeredDeps: {},
+		getValue: () => value,
+	}) as Container<T, {}, {}>;
 
 /** @todo написать реализацию */
-export const ofValue = <T>(value: T) =>
+/** @todo описать типы параметров */
+export const ofAnyValue = <T>(getValue: () => T) =>
+	(null as unknown) as Container<T, {}, {}>;
+
+/** @todo написать реализацию */
+/** @todo описать типы параметров */
+export const ofFactory = <T>(factory: (getValue: Key) => T) =>
 	(null as unknown) as Container<T, {}, {}>;
 
 /** @todo дописать проверку на добавление одинаковых ключей для зависимостей разных типов*/
@@ -122,12 +161,12 @@ type Map2TupleTest = CombineTuplesToMap<['dep1', 'dep2'], [string, number]>;
 
 export const a0 = ofClass(C0);
 export const a1 = ofClass(C1, 'myDep');
-a1.register('myDep', ofValue('sfd')).resolve();
+a1.register('myDep', ofConstant('sfd')).resolve();
 
 export const a2 = ofClass(C2, 'myDep', 'p2Dep');
 export const aa2 = a2
-	.register('myDep', ofValue('myStringValue'))
-	.register('p2Dep', ofValue(123));
+	.register('myDep', ofConstant('myStringValue'))
+	.register('p2Dep', ofConstant(123));
 
 class A {
 	constructor(public p1: string, public p2: number) {}

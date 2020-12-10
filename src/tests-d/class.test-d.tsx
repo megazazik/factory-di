@@ -2,7 +2,7 @@ import { expectType, expectError, expectNotAssignable } from 'tsd';
 import {
 	ofClass,
 	Container,
-	ofValue,
+	ofConstant,
 	NotRegisteredDependenciesError,
 } from '..';
 
@@ -20,7 +20,7 @@ class C1 {
 export function ofClassOneDep() {
 	expectType<Container<C1, { dep1: string }, {}>>(ofClass(C1, 'dep1'));
 	expectType<C1>(
-		ofClass(C1, 'dep1').register('dep1', ofValue('asdfdf')).resolve()
+		ofClass(C1, 'dep1').register('dep1', ofConstant('asdfdf')).resolve()
 	);
 }
 
@@ -33,8 +33,8 @@ export function ofClassOneDepNoRegistered() {
 export function ofClassOneDepErrors() {
 	expectError(ofClass(C1));
 	expectError(ofClass(C1, 'dep1', 'dep2'));
-	expectError(ofClass(C1, 'dep1').register('dep1', ofValue(123)));
-	expectError(ofClass(C1, 'dep1').register('unknwn', ofValue(123)));
+	expectError(ofClass(C1, 'dep1').register('dep1', ofConstant(123)));
+	expectError(ofClass(C1, 'dep1').register('unknwn', ofConstant(123)));
 }
 
 class C2 {
@@ -48,8 +48,8 @@ export function ofClassTwoDep() {
 
 	expectType<C2>(
 		ofClass(C2, 'dep1', 'dep2')
-			.register('dep1', ofValue('asdfdf'))
-			.register('dep2', ofValue(123))
+			.register('dep1', ofConstant('asdfdf'))
+			.register('dep2', ofConstant(123))
 			.resolve()
 	);
 }
@@ -60,7 +60,7 @@ export function ofClassTwoDepNoRegistered() {
 	);
 
 	expectType<NotRegisteredDependenciesError<'dep1'>>(
-		ofClass(C2, 'dep1', 'dep2').register('dep2', ofValue(123)).resolve
+		ofClass(C2, 'dep1', 'dep2').register('dep2', ofConstant(123)).resolve
 	);
 }
 
@@ -82,17 +82,17 @@ export function ofClassChildrenDeps() {
 		c3Container
 			.register(
 				'depC2',
-				c2Container.register('c2Dep1', ofValue('sdfsdf'))
+				c2Container.register('c2Dep1', ofConstant('sdfsdf'))
 			)
-			.register('depP1', ofValue(123)).resolve
+			.register('depP1', ofConstant(123)).resolve
 	);
 
 	expectType<NotRegisteredDependenciesError<'depP1'>>(
 		c3Container.register(
 			'depC2',
 			c2Container
-				.register('c2Dep1', ofValue('sdfsdf'))
-				.register('c2Dep2', ofValue(123))
+				.register('c2Dep1', ofConstant('sdfsdf'))
+				.register('c2Dep2', ofConstant(123))
 		).resolve
 	);
 
@@ -100,28 +100,28 @@ export function ofClassChildrenDeps() {
 		c3Container
 			.register(
 				'depC2',
-				c2Container.register('c2Dep1', ofValue('sdfsdf'))
+				c2Container.register('c2Dep1', ofConstant('sdfsdf'))
 			)
-			.register('c2Dep2', ofValue(123)).resolve
+			.register('c2Dep2', ofConstant(123)).resolve
 	);
 
 	expectType<NotRegisteredDependenciesError<'depP1'>>(
 		c3Container
 			.register(
 				'depC2',
-				c2Container.register('c2Dep1', ofValue('sdfsdf'))
+				c2Container.register('c2Dep1', ofConstant('sdfsdf'))
 			)
-			.register('c2Dep2', ofValue(123)).resolve
+			.register('c2Dep2', ofConstant(123)).resolve
 	);
 
 	expectNotAssignable<NotRegisteredDependenciesError<any>>(
 		c3Container
 			.register(
 				'depC2',
-				c2Container.register('c2Dep1', ofValue('sdfsdf'))
+				c2Container.register('c2Dep1', ofConstant('sdfsdf'))
 			)
-			.register('c2Dep2', ofValue(123))
-			.register('depP1', ofValue(123)).resolve
+			.register('c2Dep2', ofConstant(123))
+			.register('depP1', ofConstant(123)).resolve
 	);
 
 	expectNotAssignable<NotRegisteredDependenciesError<any>>(
@@ -129,10 +129,10 @@ export function ofClassChildrenDeps() {
 			.register(
 				'depC2',
 				c2Container
-					.register('c2Dep1', ofValue('sdfsdf'))
-					.register('c2Dep2', ofValue(123))
+					.register('c2Dep1', ofConstant('sdfsdf'))
+					.register('c2Dep2', ofConstant(123))
 			)
-			.register('depP1', ofValue(123)).resolve
+			.register('depP1', ofConstant(123)).resolve
 	);
 }
 
@@ -143,7 +143,7 @@ class C4 {
 export function ofClassGrandChildrenDeps() {
 	const c2Container = ofClass(C2, 'c2Dep1', 'c2Dep2').register(
 		'c2Dep1',
-		ofValue('423')
+		ofConstant('423')
 	);
 	const c3Container = ofClass(C3, 'depC2', 'depP1').register(
 		'depC2',
@@ -156,13 +156,13 @@ export function ofClassGrandChildrenDeps() {
 	);
 
 	expectType<NotRegisteredDependenciesError<'depP1'>>(
-		c4Container.register('c2Dep2', ofValue(908)).resolve
+		c4Container.register('c2Dep2', ofConstant(908)).resolve
 	);
 
 	expectNotAssignable<NotRegisteredDependenciesError<any>>(
 		c4Container
-			.register('depP1', ofValue(123))
-			.register('c2Dep2', ofValue(908)).resolve
+			.register('depP1', ofConstant(123))
+			.register('c2Dep2', ofConstant(908)).resolve
 	);
 }
 
@@ -189,14 +189,14 @@ export function ofClassOverrideDeps() {
 		c5Container
 			.register('depC3', c3Container)
 			.register('depC6', c6Container.register('depC2', ofClass(C2Child)))
-			.register('c3Number', ofValue(34)).resolve
+			.register('c3Number', ofConstant(34)).resolve
 	);
 
 	expectNotAssignable<NotRegisteredDependenciesError<any>>(
 		c5Container
 			.register('depC3', c3Container)
 			.register('depC6', c6Container)
-			.register('c3Number', ofValue(34))
+			.register('c3Number', ofConstant(34))
 			.register('depC2', ofClass(C2Child)).resolve
 	);
 
@@ -210,10 +210,10 @@ export function ofClassOverrideDeps() {
 				)
 			)
 			.register('depC6', c6Container)
-			.register('c3Number', ofValue(34))
+			.register('c3Number', ofConstant(34))
 			.register('depC2', ofClass(C2Child))
-			.register('c2Number', ofValue(123))
-			.register('c2String', ofValue('sdf')).resolve
+			.register('c2Number', ofConstant(123))
+			.register('c2String', ofConstant('sdf')).resolve
 	);
 
 	expectType<NotRegisteredDependenciesError<'c2String' | 'c2Number'>>(
@@ -226,7 +226,7 @@ export function ofClassOverrideDeps() {
 				)
 			)
 			.register('depC6', c6Container.register('depC2', ofClass(C2Child)))
-			.register('c3Number', ofValue(34)).resolve
+			.register('c3Number', ofConstant(34)).resolve
 	);
 
 	expectType<NotRegisteredDependenciesError<'c3Number'>>(
@@ -253,7 +253,7 @@ export function ofClassOverrideDeps() {
 			)
 			.register('depC6', c6Container)
 			.register('depC2', ofClass(C2Child))
-			.register('c3Number', ofValue(34)).resolve
+			.register('c3Number', ofConstant(34)).resolve
 	);
 }
 
@@ -275,14 +275,14 @@ export function ofClassResolveAcceptableParams() {
 	expectType<C2>(
 		c3Container
 			.register('depC2', ofClass(C2Child))
-			.register('c3Number', ofValue(123))
+			.register('c3Number', ofConstant(123))
 			.resolve('depC2')
 	);
 
 	expectType<number>(
 		c3Container
 			.register('depC2', ofClass(C2Child))
-			.register('c3Number', ofValue(123))
+			.register('c3Number', ofConstant(123))
 			.resolve('c3Number')
 	);
 
@@ -294,13 +294,13 @@ export function ofClassResolveAcceptableParams() {
 					'depC2',
 					ofClass(C2, 'c2String', 'c2Number').register(
 						'c2Number',
-						ofValue(123)
+						ofConstant(123)
 					)
 				)
 			)
 			.register('depC6', c6Container)
-			.register('c3Number', ofValue(34))
-			.register('c2String', ofValue('sdf'))
+			.register('c3Number', ofConstant(34))
+			.register('c2String', ofConstant('sdf'))
 			.resolve('c2Number')
 	);
 
@@ -312,13 +312,13 @@ export function ofClassResolveAcceptableParams() {
 					'depC2',
 					ofClass(C2, 'c2String', 'c2Number').register(
 						'c2Number',
-						ofValue(123)
+						ofConstant(123)
 					)
 				)
 			)
 			.register('depC6', c6Container)
-			.register('c3Number', ofValue(34))
-			.register('c2String', ofValue('sdf'))
+			.register('c3Number', ofConstant(34))
+			.register('c2String', ofConstant('sdf'))
 			.resolve('c2String')
 	);
 
@@ -333,7 +333,7 @@ export function ofClassResolveAcceptableParams() {
 			)
 			.register('depC6', c6Container)
 			.register('depC2', ofClass(C2Child))
-			.register('c3Number', ofValue(34))
+			.register('c3Number', ofConstant(34))
 			.resolve('c2String')
 	);
 
@@ -348,7 +348,7 @@ export function ofClassResolveAcceptableParams() {
 			)
 			.register('depC6', c6Container)
 			.register('depC2', ofClass(C2Child))
-			.register('c3Number', ofValue(34))
+			.register('c3Number', ofConstant(34))
 			.resolve('c2Number')
 	);
 
@@ -363,7 +363,7 @@ export function ofClassResolveAcceptableParams() {
 			)
 			.register('depC6', c6Container)
 			.register('depC2', ofClass(C2Child))
-			.register('c3Number', ofValue(34))
+			.register('c3Number', ofConstant(34))
 			.resolve('unknown')
 	);
 }

@@ -4,7 +4,11 @@ import { spy } from 'sinon';
 import { ofClass } from '..';
 
 tape('ofClass', (t) => {
-	t.equal(typeof ofClass, 'function');
+	class C0 {}
+
+	const container = ofClass(C0);
+
+	t.ok(container.resolve() instanceof C0);
 
 	t.end();
 });

@@ -69,8 +69,8 @@ export type RequiredDepsOfContainer<
 	RegisteredDeps extends Record<Key, ContainerData<any, any, any>>
 > = UnionToIntersection<RequiredDependenciesUnion<Deps, RegisteredDeps, never>>;
 
-type GetValue<Type, Deps extends Dependencies> = (
-	get: <K extends keyof Deps>(k: K) => Deps[K]
+export type GetValue<Type, Deps extends Dependencies> = (
+	resolve: <K extends keyof Deps>(k: K) => Deps[K]
 ) => Type;
 
 declare const DepsSymbol: unique symbol;
@@ -81,7 +81,6 @@ export type ContainerData<
 	RegisteredDeps extends Record<Key, ContainerData<any, any, any>>
 > = {
 	[DepsSymbol]?: Deps;
-	deps: Array<keyof Deps>;
 	registeredDeps: RegisteredDeps;
 	getValue: GetValue<Type, Deps>;
 };
