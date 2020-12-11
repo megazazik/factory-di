@@ -1,11 +1,21 @@
 export type Key = string | symbol;
 export type Dependencies = Record<Key, any>;
 
-export type UnionToIntersection<U> = (
-	U extends any ? (k: U) => void : never
-) extends (k: infer I) => void
-	? I
-	: never;
+declare const DepsSymbol: unique symbol;
+
+export type ContainerData<
+	Type,
+	Deps extends Dependencies,
+	RegisteredDeps extends Record<Key, ContainerData<any, any, any>>
+> = {
+	[DepsSymbol]?: Deps;
+	registeredDeps: RegisteredDeps;
+	getValue: GetValue<Type, Deps>;
+};
+
+export type GetValue<Type, Deps extends Dependencies> = (
+	resolve: <K extends keyof Deps>(k: K) => Deps[K]
+) => Type;
 
 export type RegisteredDepsOfContainer<
 	T extends ContainerData<any, any, any>
@@ -31,6 +41,12 @@ export type FlatDependenciesUnion<
 export type FlatDependencies<
 	Deps extends Record<Key, ContainerData<any, any, any>>
 > = UnionToIntersection<FlatDependenciesUnion<Deps>>;
+
+export type UnionToIntersection<U> = (
+	U extends any ? (k: U) => void : never
+) extends (k: infer I) => void
+	? I
+	: never;
 
 export type FlatRegisteredDependenciesUnion<
 	Deps extends Record<Key, ContainerData<any, any, any>>
@@ -68,19 +84,3 @@ export type RequiredDepsOfContainer<
 	Deps extends Record<Key, any>,
 	RegisteredDeps extends Record<Key, ContainerData<any, any, any>>
 > = UnionToIntersection<RequiredDependenciesUnion<Deps, RegisteredDeps, never>>;
-
-export type GetValue<Type, Deps extends Dependencies> = (
-	resolve: <K extends keyof Deps>(k: K) => Deps[K]
-) => Type;
-
-declare const DepsSymbol: unique symbol;
-
-export type ContainerData<
-	Type,
-	Deps extends Dependencies,
-	RegisteredDeps extends Record<Key, ContainerData<any, any, any>>
-> = {
-	[DepsSymbol]?: Deps;
-	registeredDeps: RegisteredDeps;
-	getValue: GetValue<Type, Deps>;
-};

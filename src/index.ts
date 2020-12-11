@@ -10,10 +10,13 @@ import {
 	RequiredDependenciesUnion,
 } from './containerData';
 
-export type NotRegisteredDependenciesError<
-	NotRegistered
-> = 'Not registered dependencies' & {
-	missingKeys?: NotRegistered;
+export type Container<
+	Type,
+	Deps extends Dependencies,
+	RegisteredDeps extends Record<Key, ContainerData<any, any, any>>
+> = ContainerData<Type, Deps, RegisteredDeps> & {
+	register: Register<Type, Deps, RegisteredDeps>;
+	resolve: Resolve<Type, Deps, RegisteredDeps>;
 };
 
 export type Resolve<
@@ -37,6 +40,12 @@ export type Resolve<
 			>
 	  >;
 
+export type NotRegisteredDependenciesError<
+	NotRegistered
+> = 'Not registered dependencies' & {
+	missingKeys?: NotRegistered;
+};
+
 export type Register<
 	Type,
 	Deps extends Record<Key, any>,
@@ -52,15 +61,6 @@ export type Register<
 	key: K,
 	child: Child
 ) => Container<Type, Deps, RegisteredDeps & { [KK in K]: Child }>;
-
-export type Container<
-	Type,
-	Deps extends Dependencies,
-	RegisteredDeps extends Record<Key, ContainerData<any, any, any>>
-> = ContainerData<Type, Deps, RegisteredDeps> & {
-	register: Register<Type, Deps, RegisteredDeps>;
-	resolve: Resolve<Type, Deps, RegisteredDeps>;
-};
 
 export type MapTuple<T extends [...any[]], NewValue> = {
 	[I in keyof T]: NewValue;
@@ -102,7 +102,7 @@ function create<
 			});
 		}) as Register<Type, Deps, RegisteredDeps>,
 		resolve: ((key?: string) => {
-			return containerData.getValue(() => null);
+			return containerData.getValue(() => null as any);
 		}) as Resolve<Type, Deps, RegisteredDeps>,
 	};
 }
