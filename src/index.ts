@@ -90,6 +90,23 @@ function create<
 >(
 	containerData: ContainerData<Type, Deps, RegisteredDeps>
 ): Container<Type, Deps, RegisteredDeps> {
+	let deps: Record<Key, ContainerData<any, any, any>>;
+
+	const resolve = ((key?: string) => {
+		// при первом вызове формируем плоский список зависимостей
+		if (!deps) {
+			deps = getFlatDependencies(containerData.registeredDeps);
+		}
+
+		if (key) {
+			if (!deps[key]) {
+				throw new Error(`Dependency "${key}" is not registered`);
+			}
+			return deps[key].getValue(resolve);
+		}
+		return containerData.getValue(resolve);
+	}) as any;
+
 	return {
 		...containerData,
 		register: ((key, container) => {
@@ -101,10 +118,18 @@ function create<
 				},
 			});
 		}) as Register<Type, Deps, RegisteredDeps>,
-		resolve: ((key?: string) => {
-			return containerData.getValue(() => null as any);
-		}) as Resolve<Type, Deps, RegisteredDeps>,
+		resolve,
 	};
+}
+
+function getFlatDependencies(
+	deps: Record<Key, ContainerData<any, any, any>>
+): Record<Key, ContainerData<any, any, any>> {
+	return Object.keys(deps).reduce(
+		(prev, key) =>
+			Object.assign(prev, getFlatDependencies(deps[key].registeredDeps)),
+		{ ...deps }
+	);
 }
 
 export type OfClass = {
@@ -129,7 +154,7 @@ export const ofConstant = <T>(value: T) =>
 
 /** @todo написать реализацию */
 /** @todo описать типы параметров */
-export const ofAnyValue = <T>(getValue: () => T) =>
+export const ofComputedValue = <T>(getValue: () => T) =>
 	(null as unknown) as Container<T, {}, {}>;
 
 /** @todo написать реализацию */
