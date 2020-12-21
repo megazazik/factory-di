@@ -118,11 +118,12 @@ function createResolve(containerData: ContainerData<any, any, any>) {
 		(k: Key) => {
 			throw new Error(`Dependency "${String(k)}" is not registered`);
 		},
-		{}
+		new Set()
 	);
 	return resolve;
 }
 
+/** @todo проверить с symbols */
 function getAllKeys(obj: any): Key[] {
 	return Object.keys(obj);
 }
@@ -130,19 +131,11 @@ function getAllKeys(obj: any): Key[] {
 function getContainerDataResolves(
 	{ getValue, registeredDeps }: ContainerData<any, any, any>,
 	parentResolve: (key: Key) => any,
-	overrideDeps: Record<Key, () => any>
+	overrideDeps: Set<Key>
 ) {
-	const registeredResolves = getAllKeys(registeredDeps).reduce(
-		(prev, k) =>
-			Object.assign(prev, {
-				[k]: () => registeredDeps[k].getValue(resolve),
-			}),
-		{}
+	const currentDeps = new Set(
+		Array.from(overrideDeps).concat(getAllKeys(registeredDeps))
 	);
-	const currentDependencies: Record<Key, () => any> = {
-		...registeredResolves,
-		...overrideDeps,
-	};
 
 	const deps: Record<Key, () => any> = {};
 
@@ -150,30 +143,17 @@ function getContainerDataResolves(
 		const childDeps = getContainerDataResolves(
 			registeredDeps[childKey],
 			resolve,
-			currentDependencies
+			currentDeps
 		);
-		Object.assign(deps, childDeps.deps);
-		Object.assign(currentDependencies, { [childKey]: childDeps.resolve });
+		Object.assign(deps, childDeps.deps, { [childKey]: childDeps.resolve });
 	});
-	Object.assign(deps, currentDependencies);
-
-	// const flatDeps = getFlatDependencies(registeredDeps);
-
-	// /** @todo проверить с symbol */
-	// const deps: any = Object.entries(flatDeps).reduce(
-	// 	(prev, [key, data]) =>
-	// 		Object.assign(prev, {
-	// 			[key]: () => (data as any).getValue(resolve),
-	// 		}),
-	// 	{}
-	// );
 
 	function resolve(key?: any): any {
 		if (key == undefined) {
 			return getValue(resolve);
 		}
 
-		if (deps[key]) {
+		if (deps[key] && !overrideDeps.has(key)) {
 			return deps[key]();
 		}
 
@@ -184,17 +164,6 @@ function getContainerDataResolves(
 		resolve,
 		deps,
 	};
-}
-
-function getFlatDependencies(
-	deps: Record<Key, ContainerData<any, any, any>>
-): any {
-	/** @todo проверить с symbol */
-	return Object.keys(deps).reduce(
-		(prev, key) =>
-			Object.assign(prev, getFlatDependencies(deps[key].registeredDeps)),
-		{ ...deps }
-	);
 }
 
 export type OfClass = {
