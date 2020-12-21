@@ -90,22 +90,12 @@ function create<
 >(
 	containerData: ContainerData<Type, Deps, RegisteredDeps>
 ): Container<Type, Deps, RegisteredDeps> {
-	let deps: Record<Key, ContainerData<any, any, any>>;
-
-	const resolve = ((key?: string) => {
-		// при первом вызове формируем плоский список зависимостей
-		if (!deps) {
-			deps = getFlatDependencies(containerData.registeredDeps);
-		}
-
-		if (key) {
-			if (!deps[key]) {
-				throw new Error(`Dependency "${key}" is not registered`);
-			}
-			return deps[key].getValue(resolve);
-		}
-		return containerData.getValue(resolve);
-	}) as any;
+	let innerResolve: any = (key?: Key) => {
+		// при первом вызове создаем resolve и заменяем им созданные ранее
+		const newResolve = createResolve(containerData);
+		innerResolve = newResolve;
+		return newResolve(key);
+	};
 
 	return {
 		...containerData,
@@ -118,13 +108,88 @@ function create<
 				},
 			});
 		}) as Register<Type, Deps, RegisteredDeps>,
+		resolve: ((key?: Key) => innerResolve(key)) as any,
+	};
+}
+
+function createResolve(containerData: ContainerData<any, any, any>) {
+	const { resolve } = getContainerDataResolves(
+		containerData,
+		(k: Key) => {
+			throw new Error(`Dependency "${String(k)}" is not registered`);
+		},
+		{}
+	);
+	return resolve;
+}
+
+function getAllKeys(obj: any): Key[] {
+	return Object.keys(obj);
+}
+
+function getContainerDataResolves(
+	{ getValue, registeredDeps }: ContainerData<any, any, any>,
+	parentResolve: (key: Key) => any,
+	overrideDeps: Record<Key, () => any>
+) {
+	const registeredResolves = getAllKeys(registeredDeps).reduce(
+		(prev, k) =>
+			Object.assign(prev, {
+				[k]: () => registeredDeps[k].getValue(resolve),
+			}),
+		{}
+	);
+	const currentDependencies: Record<Key, () => any> = {
+		...registeredResolves,
+		...overrideDeps,
+	};
+
+	const deps: Record<Key, () => any> = {};
+
+	getAllKeys(registeredDeps).forEach((childKey) => {
+		const childDeps = getContainerDataResolves(
+			registeredDeps[childKey],
+			resolve,
+			currentDependencies
+		);
+		Object.assign(deps, childDeps.deps);
+		Object.assign(currentDependencies, { [childKey]: childDeps.resolve });
+	});
+	Object.assign(deps, currentDependencies);
+
+	// const flatDeps = getFlatDependencies(registeredDeps);
+
+	// /** @todo проверить с symbol */
+	// const deps: any = Object.entries(flatDeps).reduce(
+	// 	(prev, [key, data]) =>
+	// 		Object.assign(prev, {
+	// 			[key]: () => (data as any).getValue(resolve),
+	// 		}),
+	// 	{}
+	// );
+
+	function resolve(key?: any): any {
+		if (key == undefined) {
+			return getValue(resolve);
+		}
+
+		if (deps[key]) {
+			return deps[key]();
+		}
+
+		return parentResolve(key);
+	}
+
+	return {
 		resolve,
+		deps,
 	};
 }
 
 function getFlatDependencies(
 	deps: Record<Key, ContainerData<any, any, any>>
-): Record<Key, ContainerData<any, any, any>> {
+): any {
+	/** @todo проверить с symbol */
 	return Object.keys(deps).reduce(
 		(prev, key) =>
 			Object.assign(prev, getFlatDependencies(deps[key].registeredDeps)),

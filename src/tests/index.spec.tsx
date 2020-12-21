@@ -162,63 +162,106 @@ tape('Resolve. Dependencies registered at another child containers', (t) => {
 	t.end();
 });
 
-// tape('Resolve. Dependencies registered at several children containers', (t) => {
-// 	class CWithP1 {
-// 		constructor(public p1: number) {}
-// 	}
+tape('Resolve. Dependencies registered at several children containers', (t) => {
+	class CWithP1 {
+		constructor(public p1: number) {}
+	}
 
-// 	class Parent {
-// 		constructor(public c2: C2, public cWithP1: CWithP1) {}
-// 	}
+	class Parent {
+		constructor(public c2: C2, public cWithP1: CWithP1) {}
+	}
 
-// 	const container = ofClass(Parent, 'c2', 'cWithP1')
-// 		.register(
-// 			'cWithP1',
-// 			ofClass(CWithP1, 'p1').register('p1', ofConstant(659))
-// 		)
-// 		.register(
-// 			'c2',
-// 			ofClass(C2, 'c1', 'p2')
-// 				.register('p2', ofConstant('p2Value'))
-// 				.register('c1', ofClass(C1, 'p1'))
-// 				.register('p1', ofConstant(321))
-// 		);
+	const container = ofClass(Parent, 'c2', 'cWithP1')
+		.register(
+			'cWithP1',
+			ofClass(CWithP1, 'p1').register('p1', ofConstant(659))
+		)
+		.register(
+			'c2',
+			ofClass(C2, 'c1', 'p2')
+				.register('p2', ofConstant('p2Value'))
+				.register('c1', ofClass(C1, 'p1'))
+				.register('p1', ofConstant(321))
+		);
 
-// 	const instance = container.resolve();
-// 	t.ok(instance instanceof Parent);
-// 	t.equal(instance.c2.с1.p1, 321);
-// 	t.equal(instance.cWithP1.p1, 659);
+	const instance = container.resolve();
+	t.ok(instance instanceof Parent);
+	t.equal(instance.c2.с1.p1, 321);
+	t.equal(instance.cWithP1.p1, 659);
 
-// 	t.end();
-// });
+	t.end();
+});
 
-// tape('Resolve. Override registered dependencies at parent', (t) => {
-// 	class CWithP1 {
-// 		constructor(public p1: number) {}
-// 	}
+tape('Resolve. Override registered dependencies at parent', (t) => {
+	class CWithP1 {
+		constructor(public p1: number) {}
+	}
 
-// 	class Parent {
-// 		constructor(public c2: C2, public cWithP1: CWithP1) {}
-// 	}
+	class Parent {
+		constructor(public c2: C2, public cWithP1: CWithP1) {}
+	}
 
-// 	const container = ofClass(Parent, 'c2', 'cWithP1')
-// 		.register(
-// 			'cWithP1',
-// 			ofClass(CWithP1, 'p1').register('p1', ofConstant(659))
-// 		)
-// 		.register(
-// 			'c2',
-// 			ofClass(C2, 'c1', 'p2')
-// 				.register('p2', ofConstant('p2Value'))
-// 				.register('c1', ofClass(C1, 'p1'))
-// 				.register('p1', ofConstant(321))
-// 		)
-// 		.register('p1', ofConstant(456));
+	const container = ofClass(Parent, 'c2', 'cWithP1')
+		.register(
+			'cWithP1',
+			ofClass(CWithP1, 'p1').register('p1', ofConstant(659))
+		)
+		.register(
+			'c2',
+			ofClass(C2, 'c1', 'p2')
+				.register('p2', ofConstant('p2Value'))
+				.register('c1', ofClass(C1, 'p1'))
+				.register('p1', ofConstant(321))
+		)
+		.register('p1', ofConstant(456));
 
-// 	const instance = container.resolve();
-// 	t.ok(instance instanceof Parent);
-// 	t.equal(instance.c2.с1.p1, 456);
-// 	t.equal(instance.cWithP1.p1, 456);
+	const instance = container.resolve();
+	t.ok(instance instanceof Parent);
+	t.equal(instance.c2.с1.p1, 456);
+	t.equal(instance.cWithP1.p1, 456);
 
-// 	t.end();
-// });
+	t.end();
+});
+
+tape('Resolve. Dependencies registered at another branch of parent', (t) => {
+	class Child {
+		constructor(public amount: number) {}
+	}
+
+	class Parent {
+		constructor(public child1: Child, public child2: Child) {}
+	}
+
+	class GrandParent {
+		constructor(public parent1: Parent, public parent2: Parent) {}
+	}
+
+	const container = ofClass(GrandParent, 'parent1', 'parent2')
+		.register(
+			'parent1',
+			ofClass(Parent, 'child1', 'child2')
+				.register('child1', ofClass(Child, 'amount'))
+				.register(
+					'child2',
+					ofClass(Child, 'amount').register('amount', ofConstant(121))
+				)
+		)
+		.register(
+			'parent2',
+			ofClass(Parent, 'child1', 'child2')
+				.register('child1', ofClass(Child, 'amount'))
+				.register('child2', ofClass(Child, 'amount'))
+				.register('amount', ofConstant(22))
+		);
+
+	const instance = container.resolve();
+	t.ok(instance instanceof GrandParent);
+	t.ok(instance.parent1 instanceof Parent);
+	t.ok(instance.parent2 instanceof Parent);
+	t.equal(instance.parent1.child1.amount, 121);
+	t.equal(instance.parent1.child2.amount, 121);
+	t.equal(instance.parent2.child1.amount, 22);
+	t.equal(instance.parent2.child2.amount, 22);
+
+	t.end();
+});
