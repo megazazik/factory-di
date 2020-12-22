@@ -186,15 +186,29 @@ export const ofConstant = <T>(value: T) =>
 		getValue: () => value,
 	}) as Container<T, {}, {}>;
 
-/** @todo написать реализацию */
-/** @todo описать типы параметров */
-export const ofComputedValue = <T>(getValue: () => T) =>
-	(null as unknown) as Container<T, {}, {}>;
+export type OfComputedValue = {
+	<T>(getValue: () => T): Container<T, {}, {}>;
+	<Params extends [...any[]], T, Keys extends MapTuple<Params, Key>>(
+		c: (...args: Params) => T,
+		...keys: Keys
+	): Container<T, UnknownGuard<CombineTuplesToMap<Keys, Params>>, {}>;
+};
 
 /** @todo написать реализацию */
-/** @todo описать типы параметров */
-export const ofFactory = <T>(factory: (getValue: Key) => T) =>
+/** @todo описать типы параметров для объекта */
+export const ofComputedValue: OfComputedValue = <T>(getValue: () => T) =>
 	(null as unknown) as Container<T, {}, {}>;
+
+export type FactoryResolve<Params extends Record<Key, any>> = <
+	K extends keyof Params
+>(
+	key: K
+) => Params[K];
+
+/** @todo написать реализацию */
+export const ofFactory = <T, Params extends Record<Key, any>>(
+	factory: (getValue: FactoryResolve<Params>) => T
+) => (null as unknown) as Container<T, Params, {}>;
 
 /** @todo дописать проверку на добавление одинаковых ключей для зависимостей разных типов*/
 
