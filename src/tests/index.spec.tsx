@@ -265,3 +265,60 @@ tape('Resolve. Dependencies registered at another branch of parent', (t) => {
 
 	t.end();
 });
+
+tape(
+	'Resolve. Dependencies registered at another branch of parent. Symbols',
+	(t) => {
+		class Child {
+			constructor(public amount: number) {}
+		}
+
+		class Parent {
+			constructor(public child1: Child, public child2: Child) {}
+		}
+
+		class GrandParent {
+			constructor(public parent1: Parent, public parent2: Parent) {}
+		}
+
+		const parent1Symbol = Symbol('parent1');
+		const parent2Symbol = Symbol('parent2');
+
+		const child1Symbol = Symbol('child1');
+		const child2Symbol = Symbol('child2');
+
+		const amountSymbol = Symbol('amount');
+
+		const container = ofClass(GrandParent, parent1Symbol, parent2Symbol)
+			.register(
+				parent1Symbol,
+				ofClass(Parent, child1Symbol, child2Symbol)
+					.register(child1Symbol, ofClass(Child, amountSymbol))
+					.register(
+						child2Symbol,
+						ofClass(Child, amountSymbol).register(
+							amountSymbol,
+							ofConstant(121)
+						)
+					)
+			)
+			.register(
+				parent2Symbol,
+				ofClass(Parent, child1Symbol, child2Symbol)
+					.register(child1Symbol, ofClass(Child, amountSymbol))
+					.register(child2Symbol, ofClass(Child, amountSymbol))
+					.register(amountSymbol, ofConstant(22))
+			);
+
+		const instance = container.resolve();
+		t.ok(instance instanceof GrandParent);
+		t.ok(instance.parent1 instanceof Parent);
+		t.ok(instance.parent2 instanceof Parent);
+		t.equal(instance.parent1.child1.amount, 121);
+		t.equal(instance.parent1.child2.amount, 121);
+		t.equal(instance.parent2.child1.amount, 22);
+		t.equal(instance.parent2.child2.amount, 22);
+
+		t.end();
+	}
+);

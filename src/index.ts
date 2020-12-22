@@ -123,9 +123,9 @@ function createResolve(containerData: ContainerData<any, any, any>) {
 	return resolve;
 }
 
-/** @todo проверить с symbols */
 function getAllKeys(obj: any): Key[] {
-	return Object.keys(obj);
+	const keys: Key[] = Object.keys(obj);
+	return keys.concat(Object?.getOwnPropertySymbols(obj));
 }
 
 function getContainerDataResolves(
