@@ -23,7 +23,7 @@ export function ofFactoryOneDep() {
 }
 
 export function ofFactoryOneDepNoRegistered() {
-	expectType<NotRegisteredDependenciesError<'dep1'>>(
+	expectType<NotRegisteredDependenciesError<{ dep1: number }>>(
 		ofFactory((resolve: FactoryResolve<{ dep1: number }>) => ({
 			value: resolve('dep1'),
 		})).resolve

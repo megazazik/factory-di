@@ -34,8 +34,8 @@ export type Resolve<
 			): RequiredDepsOfContainer<Deps, RegisteredDeps>[K];
 	  }
 	: NotRegisteredDependenciesError<
-			Exclude<
-				keyof RequiredDepsOfContainer<Deps, RegisteredDeps>,
+			Omit<
+				RequiredDepsOfContainer<Deps, RegisteredDeps>,
 				keyof FlatRegisteredDependencies<RegisteredDeps>
 			>
 	  >;
@@ -43,7 +43,7 @@ export type Resolve<
 export type NotRegisteredDependenciesError<
 	NotRegistered
 > = 'Not registered dependencies' & {
-	missingKeys?: NotRegistered;
+	missingKeys?: keyof NotRegistered;
 };
 
 export type Register<
@@ -194,10 +194,15 @@ export type OfComputedValue = {
 	): Container<T, UnknownGuard<CombineTuplesToMap<Keys, Params>>, {}>;
 };
 
-/** @todo написать реализацию */
 /** @todo описать типы параметров для объекта */
-export const ofComputedValue: OfComputedValue = <T>(getValue: () => T) =>
-	(null as unknown) as Container<T, {}, {}>;
+export const ofComputedValue: OfComputedValue = <T>(
+	getValue: (...args: any[]) => T,
+	...argNames: string[]
+) =>
+	create({
+		registeredDeps: {},
+		getValue: (resolve) => getValue(...argNames.map(resolve)),
+	}) as Container<T, {}, {}>;
 
 export type FactoryResolve<Params extends Record<Key, any>> = <
 	K extends keyof Params
@@ -205,10 +210,13 @@ export type FactoryResolve<Params extends Record<Key, any>> = <
 	key: K
 ) => Params[K];
 
-/** @todo написать реализацию */
 export const ofFactory = <T, Params extends Record<Key, any>>(
 	factory: (getValue: FactoryResolve<Params>) => T
-) => (null as unknown) as Container<T, Params, {}>;
+) =>
+	create({
+		registeredDeps: {},
+		getValue: factory,
+	}) as Container<T, Params, {}>;
 
 /** @todo дописать проверку на добавление одинаковых ключей для зависимостей разных типов*/
 

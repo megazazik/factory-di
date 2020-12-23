@@ -20,7 +20,7 @@ export function ofComputedValueOneDep() {
 }
 
 export function ofComputedValueOneDepNoRegistered() {
-	expectType<NotRegisteredDependenciesError<'dep1'>>(
+	expectType<NotRegisteredDependenciesError<{ dep1: number }>>(
 		ofComputedValue((p: number) => ({ value: p }), 'dep1').resolve
 	);
 }

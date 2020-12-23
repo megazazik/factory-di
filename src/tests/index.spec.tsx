@@ -1,6 +1,4 @@
 import tape from 'tape';
-import { spy } from 'sinon';
-
 import { ofClass, ofConstant } from '..';
 
 class C0 {}

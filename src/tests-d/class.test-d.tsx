@@ -25,7 +25,7 @@ export function ofClassOneDep() {
 }
 
 export function ofClassOneDepNoRegistered() {
-	expectType<NotRegisteredDependenciesError<'dep1'>>(
+	expectType<NotRegisteredDependenciesError<{ dep1: string }>>(
 		ofClass(C1, 'dep1').resolve
 	);
 }
@@ -55,11 +55,11 @@ export function ofClassTwoDep() {
 }
 
 export function ofClassTwoDepNoRegistered() {
-	expectType<NotRegisteredDependenciesError<'dep1' | 'dep2'>>(
+	expectType<NotRegisteredDependenciesError<{ dep1: string; dep2: number }>>(
 		ofClass(C2, 'dep1', 'dep2').resolve
 	);
 
-	expectType<NotRegisteredDependenciesError<'dep1'>>(
+	expectType<NotRegisteredDependenciesError<{ dep1: string }>>(
 		ofClass(C2, 'dep1', 'dep2').register('dep2', ofConstant(123)).resolve
 	);
 }
@@ -78,7 +78,7 @@ export function ofClassChildrenDeps() {
 	const c2Container = ofClass(C2, 'c2Dep1', 'c2Dep2');
 	const c3Container = ofClass(C3, 'depC2', 'depP1');
 
-	expectType<NotRegisteredDependenciesError<'c2Dep2'>>(
+	expectType<NotRegisteredDependenciesError<{ c2Dep2: number }>>(
 		c3Container
 			.register(
 				'depC2',
@@ -87,7 +87,7 @@ export function ofClassChildrenDeps() {
 			.register('depP1', ofConstant(123)).resolve
 	);
 
-	expectType<NotRegisteredDependenciesError<'depP1'>>(
+	expectType<NotRegisteredDependenciesError<{ depP1: number }>>(
 		c3Container.register(
 			'depC2',
 			c2Container
@@ -96,7 +96,7 @@ export function ofClassChildrenDeps() {
 		).resolve
 	);
 
-	expectType<NotRegisteredDependenciesError<'depP1'>>(
+	expectType<NotRegisteredDependenciesError<{ depP1: number }>>(
 		c3Container
 			.register(
 				'depC2',
@@ -105,7 +105,7 @@ export function ofClassChildrenDeps() {
 			.register('c2Dep2', ofConstant(123)).resolve
 	);
 
-	expectType<NotRegisteredDependenciesError<'depP1'>>(
+	expectType<NotRegisteredDependenciesError<{ depP1: number }>>(
 		c3Container
 			.register(
 				'depC2',
@@ -151,11 +151,11 @@ export function ofClassGrandChildrenDeps() {
 	);
 	const c4Container = ofClass(C4, 'depC3').register('depC3', c3Container);
 
-	expectType<NotRegisteredDependenciesError<'depP1' | 'c2Dep2'>>(
-		c4Container.resolve
-	);
+	expectType<
+		NotRegisteredDependenciesError<{ depP1: number; c2Dep2: number }>
+	>(c4Container.resolve);
 
-	expectType<NotRegisteredDependenciesError<'depP1'>>(
+	expectType<NotRegisteredDependenciesError<{ depP1: number }>>(
 		c4Container.register('c2Dep2', ofConstant(908)).resolve
 	);
 
@@ -216,7 +216,9 @@ export function ofClassOverrideDeps() {
 			.register('c2String', ofConstant('sdf')).resolve
 	);
 
-	expectType<NotRegisteredDependenciesError<'c2String' | 'c2Number'>>(
+	expectType<
+		NotRegisteredDependenciesError<{ c2String: String; c2Number: number }>
+	>(
 		c5Container
 			.register(
 				'depC3',
@@ -229,7 +231,7 @@ export function ofClassOverrideDeps() {
 			.register('c3Number', ofConstant(34)).resolve
 	);
 
-	expectType<NotRegisteredDependenciesError<'c3Number'>>(
+	expectType<NotRegisteredDependenciesError<{ c3Number: number }>>(
 		c5Container
 			.register(
 				'depC3',
