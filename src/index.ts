@@ -125,7 +125,10 @@ function createResolve(containerData: ContainerData<any, any, any>) {
 
 function getAllKeys(obj: any): Key[] {
 	const keys: Key[] = Object.keys(obj);
-	return keys.concat(Object?.getOwnPropertySymbols(obj));
+	if (typeof Object.getOwnPropertySymbols === 'function') {
+		return keys.concat(Object.getOwnPropertySymbols(obj));
+	}
+	return keys;
 }
 
 function getContainerDataResolves(
@@ -174,6 +177,7 @@ export type OfClass = {
 	): Container<T, UnknownGuard<CombineTuplesToMap<Keys, Params>>, {}>;
 };
 
+/** @todo описать типы параметров для объекта */
 export const ofClass: OfClass = (Constructor: any, ...argNames: string[]) =>
 	create({
 		registeredDeps: {},
@@ -186,23 +190,55 @@ export const ofConstant = <T>(value: T) =>
 		getValue: () => value,
 	}) as Container<T, {}, {}>;
 
+export type ObjectValuesIntersection<T> = UnionToIntersection<T[keyof T]>;
+
 export type OfComputedValue = {
 	<T>(getValue: () => T): Container<T, {}, {}>;
 	<Params extends [...any[]], T, Keys extends MapTuple<Params, Key>>(
 		c: (...args: Params) => T,
 		...keys: Keys
 	): Container<T, UnknownGuard<CombineTuplesToMap<Keys, Params>>, {}>;
+	<
+		Params extends object,
+		T,
+		Keys extends Key,
+		KeysMap extends Record<keyof Params, Keys>
+	>(
+		c: (params: Params) => T,
+		keys: KeysMap
+	): Container<
+		T,
+		UnknownGuard<
+			ObjectValuesIntersection<
+				{ [K in keyof Params]: { [KK in KeysMap[K]]: Params[K] } }
+			>
+		>,
+		{}
+	>;
 };
 
-/** @todo описать типы параметров для объекта */
 export const ofComputedValue: OfComputedValue = <T>(
 	getValue: (...args: any[]) => T,
-	...argNames: string[]
+	...argNames: (string | object)[]
 ) =>
-	create({
-		registeredDeps: {},
-		getValue: (resolve) => getValue(...argNames.map(resolve)),
-	}) as Container<T, {}, {}>;
+	typeof argNames[0] === 'object'
+		? (create({
+				registeredDeps: {},
+				getValue: (resolve) =>
+					getValue(
+						getAllKeys(argNames[0]).reduce(
+							(prev, key) =>
+								Object.assign(prev, {
+									[key]: resolve((argNames[0] as never)[key]),
+								}),
+							{}
+						)
+					),
+		  }) as Container<T, {}, {}>)
+		: (create({
+				registeredDeps: {},
+				getValue: (resolve) => getValue(...argNames.map(resolve)),
+		  }) as Container<T, {}, {}>);
 
 export type FactoryResolve<Params extends Record<Key, any>> = <
 	K extends keyof Params
