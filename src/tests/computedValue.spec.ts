@@ -1,8 +1,8 @@
 import tape from 'tape';
-import { ofComputedValue, ofConstant } from '..';
+import { computedValue, constant } from '..';
 
 tape('ofComputedValue. Without params', (t) => {
-	const container = ofComputedValue(() => 'my_string');
+	const container = computedValue(() => 'my_string');
 
 	t.equal(container.resolve(), 'my_string');
 
@@ -10,16 +10,16 @@ tape('ofComputedValue. Without params', (t) => {
 });
 
 tape('ofComputedValue. With params', (t) => {
-	const container = ofComputedValue(
+	const container = computedValue(
 		(pDep1: number) => ({
 			value: pDep1,
 		}),
 		'dep1'
-	).register('dep1', ofConstant(864));
+	).register('dep1', constant(864));
 
 	t.deepEqual(container.resolve(), { value: 864 });
 
-	const container2 = ofComputedValue(
+	const container2 = computedValue(
 		(pDep1: number, pDep2: string) => ({
 			value: pDep1,
 			str: pDep2,
@@ -27,8 +27,8 @@ tape('ofComputedValue. With params', (t) => {
 		'dep1',
 		'dep2'
 	)
-		.register('dep1', ofConstant(864))
-		.register('dep2', ofConstant('str2'));
+		.register('dep1', constant(864))
+		.register('dep2', constant('str2'));
 
 	t.deepEqual(container2.resolve(), { value: 864, str: 'str2' });
 
@@ -36,7 +36,7 @@ tape('ofComputedValue. With params', (t) => {
 });
 
 tape('ofComputedValue. Nested', (t) => {
-	const container = ofComputedValue(
+	const container = computedValue(
 		(
 			pdep1: number,
 			pnested1: { nestedValue: string },
@@ -50,21 +50,21 @@ tape('ofComputedValue. Nested', (t) => {
 		'nested1',
 		'nested2'
 	)
-		.register('dep1', ofConstant(154))
+		.register('dep1', constant(154))
 		.register(
 			'nested1',
-			ofComputedValue(
+			computedValue(
 				(pnStr: string) => ({
 					nestedValue: pnStr,
 				}),
 				'nStr'
-			).register('nStr', ofConstant('nStrValue'))
+			).register('nStr', constant('nStrValue'))
 		)
 		.register(
 			'nested2',
-			ofComputedValue((pn2: boolean) => pn2, 'n2')
+			computedValue((pn2: boolean) => pn2, 'n2')
 		)
-		.register('n2', ofConstant(true));
+		.register('n2', constant(true));
 
 	t.deepEqual(container.resolve(), {
 		value: 154,
@@ -81,16 +81,16 @@ tape('ofComputedValue. Nested', (t) => {
 });
 
 tape('ofComputedValue. With params. Object', (t) => {
-	const container = ofComputedValue(
+	const container = computedValue(
 		({ pDep1 }: { pDep1: number }) => ({
 			value: pDep1,
 		}),
 		{ pDep1: 'dep1' }
-	).register('dep1', ofConstant(864));
+	).register('dep1', constant(864));
 
 	t.deepEqual(container.resolve(), { value: 864 });
 
-	const container2 = ofComputedValue(
+	const container2 = computedValue(
 		({ pDep1, pDep2 }: { pDep1: number; pDep2: string }) => ({
 			value: pDep1,
 			str: pDep2,
@@ -100,8 +100,8 @@ tape('ofComputedValue. With params. Object', (t) => {
 			pDep2: 'dep2',
 		}
 	)
-		.register('dep1', ofConstant(864))
-		.register('dep2', ofConstant('str2'));
+		.register('dep1', constant(864))
+		.register('dep2', constant('str2'));
 
 	t.deepEqual(container2.resolve(), { value: 864, str: 'str2' });
 
@@ -109,7 +109,7 @@ tape('ofComputedValue. With params. Object', (t) => {
 });
 
 tape('ofComputedValue. Nested. Object', (t) => {
-	const container = ofComputedValue(
+	const container = computedValue(
 		({
 			pdep1,
 			pnested1,
@@ -129,21 +129,21 @@ tape('ofComputedValue. Nested. Object', (t) => {
 			pnested2: 'nested2',
 		}
 	)
-		.register('dep1', ofConstant(154))
+		.register('dep1', constant(154))
 		.register(
 			'nested1',
-			ofComputedValue(
+			computedValue(
 				({ pnStr }: { pnStr: string }) => ({
 					nestedValue: pnStr,
 				}),
 				{ pnStr: 'nStr' }
-			).register('nStr', ofConstant('nStrValue'))
+			).register('nStr', constant('nStrValue'))
 		)
 		.register(
 			'nested2',
-			ofComputedValue(({ pn2 }: { pn2: boolean }) => pn2, { pn2: 'n2' })
+			computedValue(({ pn2 }: { pn2: boolean }) => pn2, { pn2: 'n2' })
 		)
-		.register('n2', ofConstant(true));
+		.register('n2', constant(true));
 
 	t.deepEqual(container.resolve(), {
 		value: 154,

@@ -1,5 +1,5 @@
 import tape from 'tape';
-import { ofClass, ofConstant } from '..';
+import { Class, constant } from '..';
 
 class C0 {}
 
@@ -8,7 +8,7 @@ class C1 {
 }
 
 tape('ofClass. Without params', (t) => {
-	const container = ofClass(C0);
+	const container = Class(C0);
 
 	t.ok(container.resolve() instanceof C0);
 
@@ -16,13 +16,13 @@ tape('ofClass. Without params', (t) => {
 });
 
 tape('ofConstant', (t) => {
-	const container = ofConstant(543);
+	const container = constant(543);
 
 	t.equal(container.resolve(), 543);
 	t.equal(container.resolve(), 543);
 
 	const value = { f1: 'value' };
-	const objContainer = ofConstant(value);
+	const objContainer = constant(value);
 
 	t.equal(objContainer.resolve(), value);
 	t.equal(objContainer.resolve(), value);
@@ -31,10 +31,7 @@ tape('ofConstant', (t) => {
 });
 
 tape('Resolve. With one param', (t) => {
-	const container = ofClass(C1, 'p1Value').register(
-		'p1Value',
-		ofConstant(321)
-	);
+	const container = Class(C1, 'p1Value').register('p1Value', constant(321));
 
 	const instance = container.resolve();
 	t.ok(instance instanceof C1);
@@ -45,9 +42,9 @@ tape('Resolve. With one param', (t) => {
 });
 
 tape('Resolve. No registered dependency', (t) => {
-	const container = ofClass(C2, 'c2', 'p2').register(
+	const container = Class(C2, 'c2', 'p2').register(
 		'c2',
-		ofClass(C1, 'p1Value').register('p1Value', ofConstant(321))
+		Class(C1, 'p1Value').register('p1Value', constant(321))
 	);
 
 	try {
@@ -61,12 +58,12 @@ tape('Resolve. No registered dependency', (t) => {
 });
 
 tape('Resolve. New instance on every resolve call', (t) => {
-	const container = ofClass(C3, 'c2', 'c0')
-		.register('c0', ofClass(C0))
-		.register('c2', ofClass(C2, 'c1', 'p2'))
-		.register('c1', ofClass(C1, 'p1'))
-		.register('p1', ofConstant(937))
-		.register('p2', ofConstant('p2Value'));
+	const container = Class(C3, 'c2', 'c0')
+		.register('c0', Class(C0))
+		.register('c2', Class(C2, 'c1', 'p2'))
+		.register('c1', Class(C1, 'p1'))
+		.register('p1', constant(937))
+		.register('p2', constant('p2Value'));
 
 	const instance = container.resolve();
 	const instance2 = container.resolve();
@@ -91,13 +88,13 @@ class C4 {
 }
 
 tape('Resolve. Deep nested', (t) => {
-	const container = ofClass(C4, 'c3')
-		.register('c3', ofClass(C3, 'c2', 'c0'))
-		.register('c0', ofClass(C0))
-		.register('c2', ofClass(C2, 'c1', 'p2'))
-		.register('c1', ofClass(C1, 'p1'))
-		.register('p1', ofConstant(937))
-		.register('p2', ofConstant('p2Value'));
+	const container = Class(C4, 'c3')
+		.register('c3', Class(C3, 'c2', 'c0'))
+		.register('c0', Class(C0))
+		.register('c2', Class(C2, 'c1', 'p2'))
+		.register('c1', Class(C1, 'p1'))
+		.register('p1', constant(937))
+		.register('p2', constant('p2Value'));
 
 	const instance = container.resolve();
 	t.ok(instance instanceof C4);
@@ -112,14 +109,14 @@ tape('Resolve. Deep nested', (t) => {
 });
 
 tape('Resolve. Dependencies registered at child containers', (t) => {
-	const container = ofClass(C4, 'c3')
-		.register('c3', ofClass(C3, 'c2', 'c0').register('c0', ofClass(C0)))
+	const container = Class(C4, 'c3')
+		.register('c3', Class(C3, 'c2', 'c0').register('c0', Class(C0)))
 		.register(
 			'c2',
-			ofClass(C2, 'c1', 'p2').register('p2', ofConstant('p2Value'))
+			Class(C2, 'c1', 'p2').register('p2', constant('p2Value'))
 		)
-		.register('c1', ofClass(C1, 'p1'))
-		.register('p1', ofConstant(937));
+		.register('c1', Class(C1, 'p1'))
+		.register('p1', constant(937));
 
 	const instance = container.resolve();
 	t.ok(instance instanceof C4);
@@ -142,16 +139,13 @@ tape('Resolve. Dependencies registered at another child containers', (t) => {
 		constructor(public c2: C2, public cWithP1: CWithP1) {}
 	}
 
-	const container = ofClass(Parent, 'c2', 'cWithP1')
-		.register(
-			'cWithP1',
-			ofClass(CWithP1, 'p1').register('p1', ofConstant(659))
-		)
+	const container = Class(Parent, 'c2', 'cWithP1')
+		.register('cWithP1', Class(CWithP1, 'p1').register('p1', constant(659)))
 		.register(
 			'c2',
-			ofClass(C2, 'c1', 'p2').register('p2', ofConstant('p2Value'))
+			Class(C2, 'c1', 'p2').register('p2', constant('p2Value'))
 		)
-		.register('c1', ofClass(C1, 'p1'));
+		.register('c1', Class(C1, 'p1'));
 
 	const instance = container.resolve();
 	t.ok(instance instanceof Parent);
@@ -169,17 +163,14 @@ tape('Resolve. Dependencies registered at several children containers', (t) => {
 		constructor(public c2: C2, public cWithP1: CWithP1) {}
 	}
 
-	const container = ofClass(Parent, 'c2', 'cWithP1')
-		.register(
-			'cWithP1',
-			ofClass(CWithP1, 'p1').register('p1', ofConstant(659))
-		)
+	const container = Class(Parent, 'c2', 'cWithP1')
+		.register('cWithP1', Class(CWithP1, 'p1').register('p1', constant(659)))
 		.register(
 			'c2',
-			ofClass(C2, 'c1', 'p2')
-				.register('p2', ofConstant('p2Value'))
-				.register('c1', ofClass(C1, 'p1'))
-				.register('p1', ofConstant(321))
+			Class(C2, 'c1', 'p2')
+				.register('p2', constant('p2Value'))
+				.register('c1', Class(C1, 'p1'))
+				.register('p1', constant(321))
 		);
 
 	const instance = container.resolve();
@@ -199,19 +190,16 @@ tape('Resolve. Override registered dependencies at parent', (t) => {
 		constructor(public c2: C2, public cWithP1: CWithP1) {}
 	}
 
-	const container = ofClass(Parent, 'c2', 'cWithP1')
-		.register(
-			'cWithP1',
-			ofClass(CWithP1, 'p1').register('p1', ofConstant(659))
-		)
+	const container = Class(Parent, 'c2', 'cWithP1')
+		.register('cWithP1', Class(CWithP1, 'p1').register('p1', constant(659)))
 		.register(
 			'c2',
-			ofClass(C2, 'c1', 'p2')
-				.register('p2', ofConstant('p2Value'))
-				.register('c1', ofClass(C1, 'p1'))
-				.register('p1', ofConstant(321))
+			Class(C2, 'c1', 'p2')
+				.register('p2', constant('p2Value'))
+				.register('c1', Class(C1, 'p1'))
+				.register('p1', constant(321))
 		)
-		.register('p1', ofConstant(456));
+		.register('p1', constant(456));
 
 	const instance = container.resolve();
 	t.ok(instance instanceof Parent);
@@ -234,22 +222,22 @@ tape('Resolve. Dependencies registered at another branch of parent', (t) => {
 		constructor(public parent1: Parent, public parent2: Parent) {}
 	}
 
-	const container = ofClass(GrandParent, 'parent1', 'parent2')
+	const container = Class(GrandParent, 'parent1', 'parent2')
 		.register(
 			'parent1',
-			ofClass(Parent, 'child1', 'child2')
-				.register('child1', ofClass(Child, 'amount'))
+			Class(Parent, 'child1', 'child2')
+				.register('child1', Class(Child, 'amount'))
 				.register(
 					'child2',
-					ofClass(Child, 'amount').register('amount', ofConstant(121))
+					Class(Child, 'amount').register('amount', constant(121))
 				)
 		)
 		.register(
 			'parent2',
-			ofClass(Parent, 'child1', 'child2')
-				.register('child1', ofClass(Child, 'amount'))
-				.register('child2', ofClass(Child, 'amount'))
-				.register('amount', ofConstant(22))
+			Class(Parent, 'child1', 'child2')
+				.register('child1', Class(Child, 'amount'))
+				.register('child2', Class(Child, 'amount'))
+				.register('amount', constant(22))
 		);
 
 	const instance = container.resolve();
@@ -287,25 +275,25 @@ tape(
 
 		const amountSymbol = Symbol('amount');
 
-		const container = ofClass(GrandParent, parent1Symbol, parent2Symbol)
+		const container = Class(GrandParent, parent1Symbol, parent2Symbol)
 			.register(
 				parent1Symbol,
-				ofClass(Parent, child1Symbol, child2Symbol)
-					.register(child1Symbol, ofClass(Child, amountSymbol))
+				Class(Parent, child1Symbol, child2Symbol)
+					.register(child1Symbol, Class(Child, amountSymbol))
 					.register(
 						child2Symbol,
-						ofClass(Child, amountSymbol).register(
+						Class(Child, amountSymbol).register(
 							amountSymbol,
-							ofConstant(121)
+							constant(121)
 						)
 					)
 			)
 			.register(
 				parent2Symbol,
-				ofClass(Parent, child1Symbol, child2Symbol)
-					.register(child1Symbol, ofClass(Child, amountSymbol))
-					.register(child2Symbol, ofClass(Child, amountSymbol))
-					.register(amountSymbol, ofConstant(22))
+				Class(Parent, child1Symbol, child2Symbol)
+					.register(child1Symbol, Class(Child, amountSymbol))
+					.register(child2Symbol, Class(Child, amountSymbol))
+					.register(amountSymbol, constant(22))
 			);
 
 		const instance = container.resolve();

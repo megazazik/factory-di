@@ -1,14 +1,14 @@
 import tape from 'tape';
-import { ofClass, ofConstant } from '..';
+import { Class, constant } from '..';
 
 tape('ofClass. With params. Object', (t) => {
 	class MyClass {
 		constructor(public params: { pDep1: number }) {}
 	}
 
-	const container = ofClass(MyClass, { pDep1: 'dep1' }).register(
+	const container = Class(MyClass, { pDep1: 'dep1' }).register(
 		'dep1',
-		ofConstant(864)
+		constant(864)
 	);
 
 	t.ok(container.resolve() instanceof MyClass);
@@ -18,12 +18,12 @@ tape('ofClass. With params. Object', (t) => {
 		constructor(public params: { pDep1: number; pDep2: string }) {}
 	}
 
-	const container2 = ofClass(MyClass2, {
+	const container2 = Class(MyClass2, {
 		pDep1: 'dep1',
 		pDep2: 'dep2',
 	})
-		.register('dep1', ofConstant(864))
-		.register('dep2', ofConstant('str2'));
+		.register('dep1', constant(864))
+		.register('dep2', constant('str2'));
 
 	t.ok(container2.resolve() instanceof MyClass2);
 	t.deepEqual(container2.resolve().params, { pDep1: 864, pDep2: 'str2' });
@@ -50,21 +50,21 @@ tape('ofClass. Nested. Object', (t) => {
 		) {}
 	}
 
-	const container = ofClass(Parent, {
+	const container = Class(Parent, {
 		pdep1: 'dep1',
 		pnested1: 'nested1',
 		pnested2: 'nested2',
 	})
-		.register('dep1', ofConstant(154))
+		.register('dep1', constant(154))
 		.register(
 			'nested1',
-			ofClass(Child1, { pnStr: 'nStr' }).register(
+			Class(Child1, { pnStr: 'nStr' }).register(
 				'nStr',
-				ofConstant('nStrValue')
+				constant('nStrValue')
 			)
 		)
-		.register('nested2', ofClass(Child2, { pn2: 'n2' }))
-		.register('n2', ofConstant(true));
+		.register('nested2', Class(Child2, { pn2: 'n2' }))
+		.register('n2', constant(true));
 
 	const parent = container.resolve();
 

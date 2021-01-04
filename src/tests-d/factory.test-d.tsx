@@ -1,22 +1,22 @@
 import { expectType } from 'tsd';
 import {
 	Container,
-	ofConstant,
+	constant,
 	NotRegisteredDependenciesError,
 	FactoryResolve,
-	ofFactory,
+	factory,
 } from '..';
 
 export function ofFactoryWithoutDeps() {
-	expectType<Container<string, {}, {}>>(ofFactory(() => 'string'));
+	expectType<Container<string, {}, {}>>(factory(() => 'string'));
 	expectType<Container<{ value: boolean }, {}, {}>>(
-		ofFactory((resolve) => ({ value: Boolean(resolve) }))
+		factory((resolve) => ({ value: Boolean(resolve) }))
 	);
 }
 
 export function ofFactoryOneDep() {
 	expectType<Container<{ value: number }, { dep1: number }, {}>>(
-		ofFactory((resolve: FactoryResolve<{ dep1: number }>) => ({
+		factory((resolve: FactoryResolve<{ dep1: number }>) => ({
 			value: resolve('dep1'),
 		}))
 	);
@@ -24,7 +24,7 @@ export function ofFactoryOneDep() {
 
 export function ofFactoryOneDepNoRegistered() {
 	expectType<NotRegisteredDependenciesError<{ dep1: number }>>(
-		ofFactory((resolve: FactoryResolve<{ dep1: number }>) => ({
+		factory((resolve: FactoryResolve<{ dep1: number }>) => ({
 			value: resolve('dep1'),
 		})).resolve
 	);
@@ -38,23 +38,19 @@ export function ofFactoryTwoDep() {
 			{}
 		>
 	>(
-		ofFactory(
-			(resolve: FactoryResolve<{ dep1: number; dep22: string }>) => ({
-				value: resolve('dep1'),
-				value2: resolve('dep22'),
-			})
-		)
+		factory((resolve: FactoryResolve<{ dep1: number; dep22: string }>) => ({
+			value: resolve('dep1'),
+			value2: resolve('dep22'),
+		}))
 	);
 
 	expectType<{ value: number; value2: string }>(
-		ofFactory(
-			(resolve: FactoryResolve<{ dep1: number; dep22: string }>) => ({
-				value: resolve('dep1'),
-				value2: resolve('dep22'),
-			})
-		)
-			.register('dep1', ofConstant(432))
-			.register('dep22', ofConstant('dfg'))
+		factory((resolve: FactoryResolve<{ dep1: number; dep22: string }>) => ({
+			value: resolve('dep1'),
+			value2: resolve('dep22'),
+		}))
+			.register('dep1', constant(432))
+			.register('dep22', constant('dfg'))
 			.resolve()
 	);
 }

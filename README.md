@@ -4,10 +4,14 @@
 
 ## TODO Добавить описание
 
-This library is a wrapper of the original `react-redux` library and use it inside. `react-redux-partial` has beed created for 2 reasons:
+This library contains function to create some kind of Dependency Injection Containres. These containers do not use any global scope or metadata.
 
--   improve performance of an application when large amount of connected components are used
--   write connected react-components which are independent of a shape of redux store
+## Advantages
+
+-   strict type checking that all required dependencies are registered
+-   lightweight
+-   no global containers
+-   no decorators
 
 ## Performance improvement
 

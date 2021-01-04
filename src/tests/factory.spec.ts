@@ -1,8 +1,8 @@
 import tape from 'tape';
-import { ofFactory, ofConstant, FactoryResolve } from '..';
+import { factory, constant, FactoryResolve } from '..';
 
 tape('ofFactory. Without params', (t) => {
-	const container = ofFactory(() => 'my_string');
+	const container = factory(() => 'my_string');
 
 	t.equal(container.resolve(), 'my_string');
 
@@ -10,22 +10,20 @@ tape('ofFactory. Without params', (t) => {
 });
 
 tape('ofFactory. With params', (t) => {
-	const container = ofFactory(
-		(resolve: FactoryResolve<{ dep1: number }>) => ({
-			value: resolve('dep1'),
-		})
-	).register('dep1', ofConstant(864));
+	const container = factory((resolve: FactoryResolve<{ dep1: number }>) => ({
+		value: resolve('dep1'),
+	})).register('dep1', constant(864));
 
 	t.deepEqual(container.resolve(), { value: 864 });
 
-	const container2 = ofFactory(
+	const container2 = factory(
 		(resolve: FactoryResolve<{ dep1: number; dep2: string }>) => ({
 			value: resolve('dep1'),
 			str: resolve('dep2'),
 		})
 	)
-		.register('dep1', ofConstant(864))
-		.register('dep2', ofConstant('str2'));
+		.register('dep1', constant(864))
+		.register('dep2', constant('str2'));
 
 	t.deepEqual(container2.resolve(), { value: 864, str: 'str2' });
 
@@ -33,7 +31,7 @@ tape('ofFactory. With params', (t) => {
 });
 
 tape('ofFactory. Nested', (t) => {
-	const container = ofFactory(
+	const container = factory(
 		(
 			resolve: FactoryResolve<{
 				dep1: number;
@@ -46,21 +44,19 @@ tape('ofFactory. Nested', (t) => {
 			n2: resolve('nested2'),
 		})
 	)
-		.register('dep1', ofConstant(154))
+		.register('dep1', constant(154))
 		.register(
 			'nested1',
-			ofFactory((resolve: FactoryResolve<{ nStr: string }>) => ({
+			factory((resolve: FactoryResolve<{ nStr: string }>) => ({
 				nestedValue: resolve('nStr'),
-			})).register('nStr', ofConstant('nStrValue'))
+			})).register('nStr', constant('nStrValue'))
 		)
 
 		.register(
 			'nested2',
-			ofFactory((resolve: FactoryResolve<{ n2: boolean }>) =>
-				resolve('n2')
-			)
+			factory((resolve: FactoryResolve<{ n2: boolean }>) => resolve('n2'))
 		)
-		.register('n2', ofConstant(true));
+		.register('n2', constant(true));
 
 	t.deepEqual(container.resolve(), {
 		value: 154,

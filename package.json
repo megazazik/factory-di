@@ -10,7 +10,7 @@
     "version": "npm test && npm run build && conventional-changelog -p angular -i CHANGELOG.md -s -r 0 && git add CHANGELOG.md",
     "commit": "git-cz",
     "test": "npm run unit-test && npm run type-test",
-    "unit-test": "ts-node node_modules/tape/bin/tape ./src/**/*.spec.tsx",
+    "unit-test": "ts-node node_modules/tape/bin/tape ./src/**/*.spec.ts",
     "type-test": "tsd",
     "tape": "ts-node node_modules/tape/bin/tape",
     "w": "nodemon -e js,jsx,ts,tsx,json --exec npm run"
