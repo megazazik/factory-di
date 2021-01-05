@@ -1,15 +1,7 @@
 import { ContainerData, Dependencies, Key } from './containerData';
 import { createContainer } from './createContainer';
 import { InnerStorageKey } from './innerStorage';
-
-export const SingletonManagerKey: unique symbol =
-	typeof Symbol === 'function'
-		? Symbol('SingletonManager')
-		: ('__singletonManagerKey__' as any);
-
-export type SingletonManager = {
-	clear(key?: Key): void;
-};
+import { factory } from './factory';
 
 const SingletonStorages = new WeakMap<object, Map<object, any>>();
 
@@ -19,6 +11,25 @@ function getSingletons(containerKey: object) {
 	}
 	return SingletonStorages.get(containerKey);
 }
+
+export const SingletonManagerKey: unique symbol =
+	typeof Symbol === 'function'
+		? Symbol('SingletonManager')
+		: ('__singletonManagerKey__' as any);
+
+export type SingletonManager = {
+	clear(): void;
+};
+
+const singletonManagerContainer = factory(
+	(resolve): SingletonManager => {
+		return {
+			clear: () => {
+				getSingletons(resolve(InnerStorageKey))!.clear();
+			},
+		};
+	}
+);
 
 export function singleton<
 	Type,
@@ -37,8 +48,7 @@ export function singleton<
 
 	return createContainer({
 		getValue: (resolve) => {
-			const containerStorageKey = resolve(InnerStorageKey);
-			const singletons = getSingletons(containerStorageKey);
+			const singletons = getSingletons(resolve(InnerStorageKey));
 			if (!singletons!.has(singletonKey)) {
 				singletons!.set(singletonKey, container.getValue(resolve));
 			}
@@ -46,5 +56,5 @@ export function singleton<
 			return singletons!.get(singletonKey);
 		},
 		registeredDeps: container.registeredDeps,
-	}) as any;
+	}).register(SingletonManagerKey, singletonManagerContainer) as any;
 }

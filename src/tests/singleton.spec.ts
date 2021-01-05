@@ -329,4 +329,69 @@ tape(
 	}
 );
 
-// @todo clear instances
+tape('singleton. Clear instances', (t) => {
+	class C02 {
+		constructor() {}
+	}
+
+	class C0Container {
+		constructor(public c01: C0, public c02: C02) {}
+	}
+
+	const container = Class(C0Container, 'c01', 'c02')
+		.register('c01', singleton(Class(C0)))
+		.register('c02', singleton(Class(C02)));
+
+	const instance1 = container.resolve();
+	const instance2 = container.resolve();
+
+	// проверка объектов первого контейнера
+	t.ok(instance1.c01 instanceof C0);
+	t.equal(instance2.c01, instance1.c01);
+
+	t.ok(instance1.c02 instanceof C02);
+	t.equal(instance2.c02, instance1.c02);
+
+	const container2 = Class(C0Container, 'c01', 'c02')
+		.register('c01', singleton(Class(C0)))
+		.register('c02', singleton(Class(C02)));
+
+	const instance1_2 = container2.resolve();
+	const instance2_2 = container2.resolve();
+
+	// проверка объектов второго контейнера
+	t.ok(instance1_2.c01 instanceof C0);
+	t.equal(instance2_2.c01, instance1_2.c01);
+
+	t.ok(instance1_2.c02 instanceof C02);
+	t.equal(instance2_2.c02, instance1_2.c02);
+
+	t.notEqual(instance2.c01, instance1_2.c01);
+
+	container.resolve(SingletonManagerKey).clear();
+
+	const instance1_new = container.resolve();
+	const instance2_new = container.resolve();
+
+	// проверка объектов первого сброшенного контейнера
+	t.ok(instance1_new.c01 instanceof C0);
+	t.equal(instance2_new.c01, instance1_new.c01);
+
+	t.ok(instance1_new.c02 instanceof C02);
+	t.equal(instance2_new.c02, instance1_new.c02);
+
+	t.notEqual(
+		instance1.c02,
+		instance1_new.c02,
+		'Old instances should be destroyed'
+	);
+	t.notEqual(
+		instance1_2.c02,
+		instance1_new.c02,
+		'New objects should not be equal objects of independent container'
+	);
+	t.equal(instance1_2.c02, container2.resolve().c02),
+		'Clear call should not affect independent caontainer';
+
+	t.end();
+});
