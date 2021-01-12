@@ -2,9 +2,16 @@
 
 [![npm version](https://badge.fury.io/js/factory-di.svg)](https://badge.fury.io/js/factory-di)
 
-## TODO Добавить описание
-
 This library contains function to create some kind of Dependency Injection Containres. These containers do not use any global scope or metadata.
+
+-   [Advantages](#advantages)
+-   [Simple example](#simple-example)
+-   [Containers](#containers)
+-   [Class](#class)
+-   [computedValue](#computedValue)
+-   [constant](#constant)
+-   [factory](#factory)
+-   [singleton](#singleton)
 
 ## Advantages
 
@@ -13,276 +20,449 @@ This library contains function to create some kind of Dependency Injection Conta
 -   no global containers
 -   no decorators
 
-## Performance improvement
+## Simple example
 
-Consider, you have a redux store of this interface:
-
-```typescript
-interface PageState {
-	loginForm: LoginFormType;
-	items: SomeItemsType;
-}
-```
-
-And you have a few dozens of components connected to the `items` field of the store. Then each action which changes `loginForm` will cause call of all selectors of components connected to the`items`. It can be slowly.
-
-Using `react-redux-partial` you can easy connect components to the `items` field such way the corresponding selectors are called when only the `items` fields is changed.
-
-## Independent connected components
-
-Using `react-redux-partial` you can create a connected to a store component which can work with a state of some interface. For example:
+_foo.ts_:
 
 ```typescript
-interface LoginFormType {
-	login: string;
-	password: string;
+import { Class } from 'factory-di';
+
+interface Database {
+	// ...
 }
+
+class Foo {
+	constructor(private database: Database) {}
+}
+
+// creates container which can create Foo instances
+// and declare that database parameter of interface Database should be registered via token 'database'
+export default Class(Foo, 'database');
 ```
 
-And then you can reuse this component on any page where a redux state has the login form data in any field.
-
-<!-- ## Simple example -->
-
-## API
-
-### createConnects
-
-`createConnects` function returns a set of methods to connect component to a part of a redux store.
+_database.ts_:
 
 ```typescript
-import { createConnects } from 'react-redux-partial';
+import { Class } from 'factory-di';
 
-type LoginFormType = {
-	login: string;
-	password: string;
-};
-
-const { connect } = createConnects<LofinFormType>();
-```
-
-`createConnects` returns an object with fields:
-
--   context
--   useDispatch
--   useSelector
--   useStore
--   connect
--   Provider
--   withProvider
-
-#### context
-
-`createConnects` returns a new `context` object. It can be use directly or as a parameter of original `Provider` and `connect` from `react-redux`. All other methods returned by `createConnects` work only with this context.
-
-#### useDispatch, useSelector, useStore, connect
-
-These functions work as original `useDispatch`, `useSelector`, `useStore`, `connect` functions from `react-redux` but only with a `context` returned by the same `createConnects` call.
-
-#### Provider
-
-The `Provider` component adds a store to react context. To get the store from context you can use the `context` returned by `createConnects` or any of methods `useDispatch`, `useSelector`, `useStore`, `connect`.
-
-##### Pass a store
-
-You can use `Provider` as you usually use the `react-redux` provider.
-
-```tsx
-import { render } from 'react';
-import { createConnects } from 'react-redux-partial';
-import { createStore } from 'redux';
-import SomeComponent from './SomeComponent';
-
-type LoginFormType = {
-	login: string;
-	password: string;
-};
-
-const store = createStore(/* arguments */);
-
-const { Provider, connect } = createConnects<LofinFormType>();
-
-const ConnectedComponent = connect(/* arguments */)(SomeComponent);
-
-render(
-	<Provider store={store}>
-		<ConnectedComponent />
-	</Provider>,
-	element
-);
-```
-
-##### Pass a parent context
-
-Also you can create some `ConnectedComponent` and use it with stores which contain a state of different types.
-
-Component.tsx
-
-```tsx
-export type LoginFormType = {
-	login: string;
-	password: string;
-};
-
-const { Provider, connect } = createConnects<LofinFormType>();
-
-export const ConnectedComponent = connect(/* arguments */)(SomeComponent);
-export { Provider };
-```
-
-You can pass to the Provider a parent context and a field where is a state of type `LoginFormType`.
-
-```tsx
-import { render } from 'react';
-import { createConnects } from 'react-redux-partial';
-import { createStore } from 'redux';
-import ConnectedComponent, {
-	LoginFormType,
-	Provider as ConnectedComponentProvider,
-} from './Component';
-
-type PageStateLoginFormType = {
-	loginForm: LoginFormType;
-};
-
-const store = createStore(/* arguments */);
-
-const { Provider, context } = createConnects<PageStateLoginFormType>();
-
-render(
-	<Provider store={store}>
-		<ConnectedComponentProvider context={context} fields="loginForm">
-			<ConnectedComponent />
-		</ConnectedComponentProvider>
-	</Provider>,
-	element
-);
-```
-
-Selectors which are passed to `connect` will be invoked only if the `loginForm` field is changed. This can improve a page performance.
-
-Also you can pass a `select` props if you want to transform parent state to chils state. For example:
-
-```tsx
-import ConnectedComponent, {
-	LoginFormType,
-	Provider as ConnectedComponentProvider,
-} from './Component';
-
-type PageStateLoginFormType = {
-	loginForm: {
-		email: string;
-		pass: string;
-	};
-	/** some other fields */
-};
-
-function selector(state: { email: string; pass: string }): LoginFormType {
-	return {
-		login: state.email,
-		password: state.pass,
-	};
+class Database {
+	constructor(
+		private host: string,
+		private login: string,
+		private password: string
+	) {}
 }
 
-render(
-	<Provider store={store}>
-		<ConnectedComponentProvider
-			context={context}
-			fields="loginForm"
-			select={selector}
-		>
-			<ConnectedComponent />
-		</ConnectedComponentProvider>
-	</Provider>,
-	element
-);
+// creates container which can create Database instances and declare tokens for all parameters
+export default Class(Database, 'dbHost', 'dbLogin', 'dbPassword');
 ```
 
-Or you can pass an object instead of a string to `fields` prop.
+_index.ts_:
 
-```tsx
-import ConnectedComponent, {
-	LoginFormType,
-	Provider as ConnectedComponentProvider,
-} from './Component';
+```typescript
+import { singleton, constant } from 'factory-di';
+import fooContainer from './foo';
+import databaseContainer from './database';
 
-type PageStateLoginFormType = {
-	user: {
-		email: string;
-		phone: string;
-	};
-	pass: string;
-	orders: any[];
-};
+// you can not create Foo via fooContainer here because its dependency 'database' is not registered yet
+// this line would cause TS error
+// fooContainer.resolve();
 
-function selector(state: {
-	user: {
-		email: string;
-	};
-	pass: string;
-}): LoginFormType {
-	return {
-		login: state.user.email,
-		password: state.pass,
-	};
+// creates a new container (each call of register function create a new independent containers)
+const containerWithDatabase = fooContainer
+	// registers database as a singleton
+	.register('database', singleton(databaseContainer))
+	// you must register also all dependencies of 'database'
+	// or a call of resolve would cause TS error too
+	// you can register static values via 'constant' function
+	.register('dbHost', constant('<your_host>'))
+	.register('dbLogin', constant('<your_login>'))
+	.register('dbPassword', constant('<your_password>'));
+
+// now you can create Foo
+const fooInstance = containerWithDatabase.resolve();
+
+// or you can create Database
+const database = containerWithDatabase.resolve('database');
+```
+
+## Containers
+
+Containers are objects which can create some values. They are similar to factories. They do not use the global scope as regular Dependency Injection Containers.
+
+Each container has a main value. It can be created via a `resolve` call without parameters.
+
+```typescript
+class Foo {}
+
+const fooInstance = Class(Foo).resolve();
+```
+
+A container can have any list of dependencies. You should declare all dependencies when you create a container.
+
+```typescript
+class Bar {
+	constructor(public foo: Foo) {}
 }
 
-render(
-	<Provider store={store}>
-		<ConnectedComponentProvider
-			context={context}
-			fields={{
-				user: { email: true },
-				pass: true,
-			}}
-			select={selector}
-		>
-			<ConnectedComponent />
-		</ConnectedComponentProvider>
-	</Provider>,
-	element
+// create a container and declare Foo dependency for the only argument of Bar constructor
+const container = Class(Bar, 'Foo');
+```
+
+Each dependency has a token. You can use a string or a symbol as a dependency token.
+
+Before you can call the `resolve` method you must registed all declared dependencies. You can do it via the `register` method. It recevies a dependency token and the dependency container.
+
+```typescript
+class Bar {
+	constructor(public foo: Foo) {}
+}
+
+const container = Class(Bar, 'Foo')
+	// register Foo dependency with a new container
+	.register('Foo', Class(Foo));
+
+const barInstance = container.resolve();
+```
+
+Also you can create any declared dependency. To do that you need to pass a token of the dependency.
+
+```typescript
+const fooInstance = container.resolve('Foo');
+```
+
+Each call of the `register` method returns a new inpedendent container.
+
+Containers can have many levels of nesting. You can use the `resolve` function to create values from any level of nesting.
+
+Dependencies can be registered via a root container or via any nested container.
+
+```typescript
+class Foo {}
+
+class Bar {
+	constructor(public foo: Foo) {}
+}
+
+class Root {
+	constructor(public bar: Bar) {}
+}
+
+const root1 = Class(Root, 'bar')
+	.register('bar', Class(Bar, 'foo'))
+	.register('foo', Class(Foo)) // register foo via the Root container
+	.resolve();
+
+const root2 = Class(Root, 'bar')
+	.register(
+		'bar',
+		Class(Bar, 'foo').register('foo', Class(Foo)) // register foo via the Bar container
+	)
+	.resolve();
+```
+
+If some dependency is registered twice in different child containers then each child container receives its own dependency value.
+
+```typescript
+class Foo1 {
+	constructor(public str: string) {}
+}
+
+class Foo2 {
+	constructor(public str: string) {}
+}
+
+class Root {
+	constructor(public foo1: Foo1, public foo2: Foo2) {}
+}
+
+const root = Class(Root, 'foo1', 'foo2')
+	// register 'strValue1' via foo1
+	.register('foo1', Class(Foo, 'str').register('str', constant('strValue1')))
+	// register 'strValue2' via foo2
+	.register('foo2', Class(Foo, 'str').register('str', constant('strValue2')))
+	.resolve();
+
+// each child instance has its own string value
+root.foo1.str; // 'strValue1'
+root.foo2.str; // 'strValue2'
+```
+
+If some dependency is registered via a parent container and via a any child container then the parent dependency value is used for parent and children containers.
+
+```typescript
+class Foo1 {
+	constructor(public str: string) {}
+}
+
+class Root {
+	constructor(public foo1: Foo1) {}
+}
+
+const root = Class(Root, 'foo1', 'foo2')
+	// register 'strValue1' via foo1
+	.register('foo1', Class(Foo, 'str').register('str', constant('strValue1')))
+	// register 'strValueRoot'
+	.register('str', constant('strValueRoot'))
+	.resolve();
+
+root.foo1.str; // 'strValueRoot'
+```
+
+## Class
+
+The `Class` function can be used to create containers which create some class instances.
+
+There are two form of the `Class` function.
+
+### Each constructor dependency as a separate argument
+
+The first form can be used for constructors which receive each dependency as a separate argument.
+The simplified type of the first form.
+
+```typescript
+function Class(
+	// the first argument is a class constructor
+	Constructor: { new (...args: any[]): any },
+	// other arguments - list of tokens for each argument of the constructor
+	...tokens: Array<string | symbol>
+): Container;
+```
+
+Example.
+
+```typescript
+class MyClass {
+	constructor(public param1: string, public param2: number) {}
+}
+
+const myClassContainer = Class(MyClass, 'param1Token', 'param2Token');
+
+const myClassInstance = myClassContainer
+	.register('param1Token', constant('strValue'))
+	.register('param2Token', constant(123))
+	.resolve();
+```
+
+### Object with constructor dependencies
+
+The second form can be used for constructors which receive an object with dependencies as the only argument.
+The simplified type of the second form.
+
+```typescript
+function Class(
+	// the first argument is a class constructor
+	Constructor: { new (params: Record<string, any>): any },
+	// map of tokens where
+	//   keys - keys of the constructor argument
+	//   values - tokens for the corresponding argument
+	tokensMap: Record<string, string | symbol>
+): Container;
+```
+
+Example.
+
+```typescript
+interface MyClassParams {
+	strParam: string;
+	numParam: number;
+}
+
+class MyClass {
+	constructor(public params: MyClassParams) {}
+}
+
+const myClassContainer = Class(MyClass, {
+	strParam: 'param1Token',
+	numParam: 'param2Token',
+});
+
+const myClassInstance = myClassContainer
+	.register('param1Token', constant('strValue'))
+	.register('param2Token', constant(123))
+	.resolve();
+
+myClassInstance.params.strParam; // 'strValue'
+myClassInstance.params.numParam; // 123
+```
+
+## computedValue
+
+The `computedValue` function can be used to create containers for any computed values.
+
+There are two form of the `computedValue` function.
+
+### Each computedValue dependency as a separate argument
+
+The first form can be used for functions which receive each dependency as a separate argument.
+The simplified type of the first form.
+
+```typescript
+function computedValue(
+	// the first argument is a function which creates some value
+	create: (...args: any[]): any,
+	// other arguments - list of tokens for each argument of the create function
+	...tokens: Array<string | symbol>
+): Container;
+```
+
+Example.
+
+```typescript
+const myContainer = computedValue(
+	// function can return any value
+	(param1: string, param2: number) => new MyClass(param1, param2),
+	'param1Token',
+	'param2Token'
 );
+
+const myValue = myContainer
+	.register('param1Token', constant('strValue'))
+	.register('param2Token', constant(123))
+	.resolve();
 ```
 
-For each prop you want to pass to a child provider you should specify `true`. Also you can use `select` prop to transform parent state.
+### Object with computedValue dependencies
 
-### Use custom partial provider instead of original
+The second form can be used for functions which receive an object with dependencies as the only argument.
+The simplified type of the second form.
 
-I some cases you may have to use a original `react-redux` provider in a page root. If you have some components which are connected with methods returned by `createConnects`, then you should use a `Provider` component from `react-redux-partial` instead of original. It has the same behavior but turns on performance optimization.
-
-### Override original react-redux context
-
-If you want to use some component connected by original `connect` you can you use `OverrideStoreProvider` to connect it to a partial store. It can improve performance.
-
-With partial root provider.
-
-```tsx
-import { createConnects, OverrideStoreProvider } from 'react-redux-partial';
-
-const { Provider, context } = createConnects();
-const store = createStore();
-
-<Provider store={store}>
-	...
-	<OverrideStoreProvider context={context} fields="someField">
-		<ConnectedComponent />
-	</OverrideStoreProvider>
-	...
-</Provider>;
+```typescript
+function computedValue(
+	// the first argument is a function which creates some value
+	create: (params: Record<string, any>): any,
+	// map of tokens where
+	//   keys - keys of the create function argument
+	//   values - tokens for the corresponding argument
+	tokensMap: Record<string, string | symbol>
+): Container;
 ```
 
-With original root provider.
+Example.
 
-```tsx
-import { Provider } from 'react-redux';
-import { OverrideStoreProvider } from 'react-redux-partial';
+```typescript
+interface MyClassParams {
+	strParam: string;
+	numParam: number;
+}
 
-const store = createStore();
+const myContainer = Class(
+	// function can return any value
+	(params: MyClassParams) => new MyClass(params),
+	{
+		strParam: 'param1Token',
+		numParam: 'param2Token',
+	}
+);
 
-<Provider store={store}>
-	...
-	<OverrideStoreProvider fields="someField">
-		<ConnectedComponent />
-	</OverrideStoreProvider>
-	...
-</Provider>;
+const myValue = myContainer
+	.register('param1Token', constant('strValue'))
+	.register('param2Token', constant(123))
+	.resolve();
+
+myValue.params.strParam; // 'strValue'
+myValue.params.numParam; // 123
 ```
+
+## constant
+
+The `constant` function can be used to create a container for some immutable value. The common case - to pass a constant container as a dependency of some other container.
+
+```typescript
+function constant(value: any): Container;
+```
+
+Example.
+
+```typescript
+const myConstantContainer = constant(99);
+
+computedValue((num: number) => new MyClass(num), 'numValue')
+	.register('numValue', myConstantContainer)
+	.resolve();
+```
+
+## factory
+
+The `factory` function can be used to create Factory method or some Factories.
+
+```typescript
+type Resolve = (token: string | symbol) => any;
+
+function factory(
+	// the only argument - a function which returns a value (usually a factory or a factory method)
+	create: (resolve: Resolve): any,
+): Container;
+```
+
+The `create` function (the only argument of `factory`) receives the `resolve` method. The `resolve` method receives a dependency token and returns its value.
+
+Example.
+
+```typescript
+import { FactoryResolve, factory } from 'factory-di';
+import { repositoryContainer } from './repository';
+import { MyClass } from './myClass';
+
+// dependencies of the factory method
+interface MyFactoryMethodDependencies {
+	repository: Repository;
+}
+
+const myFactoryMethod = factory(
+	(resolve: FactoryResolve<MyFactoryMethodDependencies>) => {
+		// the factory method receives an id and return an instance
+		return (id: string) =>
+			new MyClass({
+				repository: resolve('repository'),
+				id,
+			});
+	}
+)
+	// register the only dependency
+	.register('repository', repositoryContainer)
+	.resolve();
+
+const myClassInstance1 = myFactoryMethod('id1');
+const myClassInstance2 = myFactoryMethod('id2');
+```
+
+## singleton
+
+If you need some dependency to be singleton you can wrap any dependency container with the `singleton` function.
+
+```typescript
+import { Class, singleton } from 'factory-di';
+
+class Foo {}
+
+class Bar {
+	constructor(public foo: Foo) {}
+}
+
+const container = Class(Bar, 'Foo').register(
+	Bar,
+	// wrap Foo container with singleton
+	singleton(Class(Foo))
+);
+
+// now each Bar instance reveices the same Foo instance
+const barInstance1 = container.resolve();
+const barInstance2 = container.resolve();
+```
+
+Each call of `singleton` creates an independent instance container. If you register some dependency via two nested containers with two calls of `singleton`. Then these two nested containers will receive 2 different instances.
+
+If you need nested containers receive the same singleton instance you should once wrap some container with `singleton` and pass the wrapped container as a dependency to other containers. Or you should register a singleton once via a root container.
+
+### Clear singletons
+
+To clear singleton instances you can get a Singleton Manager instance. You can get it via `SingletonManagerKey`.
+
+```typescript
+import { SingletonManagerKey } from 'factory-di';
+
+const singletonManager = rootContainer.resolve(SingletonManagerKey);
+```
+
+A Singleton Manager instance has the only method 'clear' which delete all singleton instances created inside this container and inside all nested containers.
