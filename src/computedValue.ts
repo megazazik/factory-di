@@ -11,10 +11,6 @@ import {
 
 export type OfComputedValue = {
 	<T>(getValue: () => T): Container<T, {}, {}>;
-	<Params extends [...any[]], T, Keys extends MapTuple<Params, Key>>(
-		c: (...args: Params) => T,
-		...keys: Keys
-	): Container<T, UnknownGuard<CombineTuplesToMap<Keys, Params>>, {}>;
 	<
 		Params extends object,
 		T,
@@ -22,7 +18,7 @@ export type OfComputedValue = {
 		KeysMap extends Record<keyof Params, Keys>
 	>(
 		c: (params: Params) => T,
-		keys: KeysMap
+		keys: KeysMap & object
 	): Container<
 		T,
 		UnknownGuard<
@@ -32,6 +28,10 @@ export type OfComputedValue = {
 		>,
 		{}
 	>;
+	<Params extends [...any[]], T, Keys extends MapTuple<Params, Key>>(
+		c: (...args: Params) => T,
+		...keys: Keys
+	): Container<T, UnknownGuard<CombineTuplesToMap<Keys, Params>>, {}>;
 };
 
 export const computedValue: OfComputedValue = <T>(

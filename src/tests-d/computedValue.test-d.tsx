@@ -95,3 +95,9 @@ export function ofComputedValueObjectTwoDep() {
 			.resolve()
 	);
 }
+
+export function onComputedValueWithEmptyInterface() {
+	expectType<Container<{ value: boolean }, { p0: {} }, {}>>(
+		computedValue((p: {}) => ({ value: !!p }), 'p0')
+	);
+}

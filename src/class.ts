@@ -11,10 +11,6 @@ import {
 
 export type OfClass = {
 	<T>(c: { new (): T }): Container<T, {}, {}>;
-	<Params extends [...any[]], T, Keys extends MapTuple<Params, Key>>(
-		c: { new (...args: Params): T },
-		...keys: Keys
-	): Container<T, UnknownGuard<CombineTuplesToMap<Keys, Params>>, {}>;
 	<
 		Params extends object,
 		T,
@@ -22,7 +18,7 @@ export type OfClass = {
 		KeysMap extends Record<keyof Params, Keys>
 	>(
 		c: { new (args: Params): T },
-		keys: KeysMap
+		keys: KeysMap & object
 	): Container<
 		T,
 		UnknownGuard<
@@ -32,6 +28,10 @@ export type OfClass = {
 		>,
 		{}
 	>;
+	<Params extends [...any[]], T, Keys extends MapTuple<Params, Key>>(
+		c: { new (...args: Params): T },
+		...keys: Keys
+	): Container<T, UnknownGuard<CombineTuplesToMap<Keys, Params>>, {}>;
 };
 
 export const Class: OfClass = (Constructor: any, ...argNames: string[]) =>
