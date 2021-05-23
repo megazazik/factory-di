@@ -1,3 +1,12 @@
+# [0.2.0](https://github.com/megazazik/factory-di/compare/v0.1.1...v0.2.0) (2021-05-23)
+
+
+### Features
+
+* **register:** map of dependencies can be passed to the register method ([920c7bb](https://github.com/megazazik/factory-di/commit/920c7bbc00acfda149b4f64fcf0470eeba24ceea))
+
+
+
 ## [0.1.1](https://github.com/megazazik/factory-di/compare/v0.1.0...v0.1.1) (2021-05-20)
 
 
