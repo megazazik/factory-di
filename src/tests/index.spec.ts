@@ -308,3 +308,35 @@ tape(
 		t.end();
 	}
 );
+
+tape(
+	'Resolve. Object. Dependencies registered at several children containers',
+	(t) => {
+		class CWithP1 {
+			constructor(public p1: number) {}
+		}
+
+		class Parent {
+			constructor(public c2: C2, public cWithP1: CWithP1) {}
+		}
+
+		const container = Class(Parent, 'c2', 'cWithP1')
+			.register({
+				cWithP1: Class(CWithP1, 'p1').register({ p1: constant(659) }),
+			})
+			.register({
+				c2: Class(C2, 'c1', 'p2').register({
+					p2: constant('p2Value'),
+					c1: Class(C1, 'p1'),
+					p1: constant(321),
+				}),
+			});
+
+		const instance = container.resolve();
+		t.ok(instance instanceof Parent);
+		t.equal(instance.c2.с1.p1, 321);
+		t.equal(instance.cWithP1.p1, 659);
+
+		t.end();
+	}
+);

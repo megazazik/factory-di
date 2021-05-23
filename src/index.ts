@@ -1,3 +1,6 @@
+/**
+ * @todo опциональные параметры у контейнеров?
+ */
 export * from './createContainer';
 export * from './factory';
 export * from './class';

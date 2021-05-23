@@ -119,10 +119,25 @@ class Bar {
 }
 
 const container = Class(Bar, 'Foo')
-	// register Foo dependency with a new container
+	// registers Foo dependency with a new container
 	.register('Foo', Class(Foo));
 
 const barInstance = container.resolve();
+```
+
+Multiple dependencies registrations can be union to a single 'register' method call.
+
+```typescript
+class Bar {
+	constructor(public dep1: string, public dep2: number) {}
+}
+
+const container = Class(SomeClass, 'dep1', 'dep2')
+	// registers all dependencies via object
+	.register({
+		dep1: constant('myStringValue'),
+		dep2: constant(123),
+	});
 ```
 
 Also you can create any declared dependency. To do that you need to pass a token of the dependency.

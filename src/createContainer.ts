@@ -39,27 +39,39 @@ export type Resolve<
 			>
 	  >;
 
-export type NotRegisteredDependenciesError<
-	NotRegistered
-> = 'Not registered dependencies' & {
-	missingKeys?: keyof NotRegistered;
-};
+export type NotRegisteredDependenciesError<NotRegistered> =
+	'Not registered dependencies' & {
+		missingKeys?: keyof NotRegistered;
+	};
 
 export type Register<
 	Type,
 	Deps extends Record<Key, any>,
 	RegisteredDeps extends Record<Key, ContainerData<any, any, any>>
-> = <
-	K extends keyof (Deps & FlatDependencies<RegisteredDeps>),
-	Child extends ContainerData<
-		(Deps & FlatDependencies<RegisteredDeps>)[K],
-		any,
-		any
-	>
->(
-	key: K,
-	child: Child
-) => Container<Type, Deps, RegisteredDeps & { [KK in K]: Child }>;
+> = {
+	<
+		NewDeps extends Partial<
+			DepsToContainerData<Deps & FlatDependencies<RegisteredDeps>>
+		>
+	>(
+		deps: NewDeps
+	): Container<Type, Deps, RegisteredDeps & NewDeps>;
+	<
+		K extends keyof (Deps & FlatDependencies<RegisteredDeps>),
+		Child extends ContainerData<
+			(Deps & FlatDependencies<RegisteredDeps>)[K],
+			any,
+			any
+		>
+	>(
+		key: K,
+		child: Child
+	): Container<Type, Deps, RegisteredDeps & { [KK in K]: Child }>;
+};
+
+export type DepsToContainerData<Deps> = {
+	[K in keyof Deps]: ContainerData<Deps[K], any, any>;
+};
 
 export type MapTuple<T extends [...any[]], NewValue> = {
 	[I in keyof T]: NewValue;
@@ -98,12 +110,15 @@ export function createContainer<
 
 	return {
 		...containerData,
-		register: ((key, container) => {
+		register: ((
+			key: Key | object,
+			container?: ContainerData<any, any, any>
+		) => {
 			return createContainer({
 				...containerData,
 				registeredDeps: {
 					...containerData.registeredDeps,
-					[key]: container,
+					...(typeof key === 'object' ? key : { [key]: container }),
 				},
 			});
 		}) as Register<Type, Deps, RegisteredDeps>,

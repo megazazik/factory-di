@@ -165,6 +165,17 @@ export function ofClassOverrideDeps() {
 			.register('c2String', constant('sdf')).resolve
 	);
 
+	expectNotAssignable<NotRegisteredDependenciesError<any>>(
+		c5Container
+			.register(
+				'depC3',
+				c3Container.register('depC2', Class(C2, 'c2String', 'c2Number'))
+			)
+			.register('depC6', c6Container)
+			.register('c3Number', constant(34))
+			.register('depC2', Class(C2Child)).resolve
+	);
+
 	expectType<
 		NotRegisteredDependenciesError<{ c2String: String; c2Number: number }>
 	>(
