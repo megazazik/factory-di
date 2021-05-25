@@ -1,3 +1,12 @@
+## [0.2.2](https://github.com/megazazik/factory-di/compare/v0.2.1...v0.2.2) (2021-05-25)
+
+
+### Features
+
+* **types:** improve IDE tips for the register method ([9097d61](https://github.com/megazazik/factory-di/commit/9097d610bc7a8dbcf38fb80ecd47c973b98e0383))
+
+
+
 ## [0.2.1](https://github.com/megazazik/factory-di/compare/v0.2.0...v0.2.1) (2021-05-25)
 
 
