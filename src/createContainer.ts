@@ -54,7 +54,10 @@ export type Register<
 			DepsToContainerData<Deps & FlatDependencies<RegisteredDeps>>
 		>
 	>(
-		deps: NewDeps
+		deps: NewDeps &
+			Partial<
+				DepsToContainerData<Deps & FlatDependencies<RegisteredDeps>>
+			>
 	): Container<Type, Deps, RegisteredDeps & NewDeps>;
 	<
 		K extends keyof (Deps & FlatDependencies<RegisteredDeps>),
