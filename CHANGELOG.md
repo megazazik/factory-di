@@ -1,3 +1,12 @@
+## [0.2.1](https://github.com/megazazik/factory-di/compare/v0.2.0...v0.2.1) (2021-05-25)
+
+
+### Features
+
+* **types:** add AllDependenciesOfContainer type helper ([c7a9b1f](https://github.com/megazazik/factory-di/commit/c7a9b1f6ead2003f494aa3e41e1bda85e29fdb97))
+
+
+
 # [0.2.0](https://github.com/megazazik/factory-di/compare/v0.1.1...v0.2.0) (2021-05-23)
 
 
