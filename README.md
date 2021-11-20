@@ -111,7 +111,7 @@ const container = Class(Bar, 'Foo');
 
 Each dependency has a token. You can use a string or a symbol as a dependency token.
 
-Before you can call the `resolve` method you must registed all declared dependencies. You can do it via the `register` method. It recevies a dependency token and the dependency container.
+Before you can call the `resolve` method you must registed all declared dependencies. You can do it via the `register` method. It receives a dependency token and a dependency container.
 
 ```typescript
 class Bar {
@@ -137,6 +137,17 @@ const container = Class(SomeClass, 'dep1', 'dep2')
 	.register({
 		dep1: constant('myStringValue'),
 		dep2: constant(123),
+	});
+```
+
+If you want to register a simple value as a dependency via the `register` method you can omit the `constant` function call. This example is equal to the previous.
+
+```typescript
+const container = Class(SomeClass, 'dep1', 'dep2')
+	// registers all dependencies via object
+	.register({
+		dep1: 'myStringValue',
+		dep2: 123,
 	});
 ```
 

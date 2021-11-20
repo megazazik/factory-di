@@ -9,6 +9,11 @@ import {
 } from './containerData';
 import { InnerStorageKey } from './innerStorage';
 
+const ContainerSymbol: unique symbol =
+	typeof Symbol === 'function'
+		? Symbol('ContainerSymbol')
+		: ('__ContainerSymbol__' as any);
+
 export type Container<
 	Type,
 	Deps extends Dependencies,
@@ -16,6 +21,7 @@ export type Container<
 > = ContainerData<Type, Deps, RegisteredDeps> & {
 	register: Register<Type, Deps, RegisteredDeps>;
 	resolve: Resolve<Type, Deps, RegisteredDeps>;
+	[ContainerSymbol]: true;
 };
 
 export type Resolve<
@@ -58,7 +64,11 @@ export type Register<
 			Partial<
 				DepsToContainerData<Deps & FlatDependencies<RegisteredDeps>>
 			>
-	): Container<Type, Deps, RegisteredDeps & NewDeps>;
+	): Container<
+		Type,
+		Deps,
+		RegisteredDeps & MapConstantsToContainers<NewDeps>
+	>;
 	<
 		K extends keyof (Deps & FlatDependencies<RegisteredDeps>),
 		Child extends ContainerData<
@@ -70,10 +80,27 @@ export type Register<
 		key: K,
 		child: Child
 	): Container<Type, Deps, RegisteredDeps & { [KK in K]: Child }>;
+	<
+		K extends keyof (Deps & FlatDependencies<RegisteredDeps>),
+		Child extends (Deps & FlatDependencies<RegisteredDeps>)[K]
+	>(
+		key: K,
+		child: Child
+	): Container<
+		Type,
+		Deps,
+		RegisteredDeps & { [KK in K]: ContainerData<Child, {}, {}> }
+	>;
+};
+
+export type MapConstantsToContainers<T extends Record<Key, any>> = {
+	[K in keyof T]: T[K] extends ContainerData<any, any, any>
+		? T[K]
+		: ContainerData<T[K], {}, {}>;
 };
 
 export type DepsToContainerData<Deps> = {
-	[K in keyof Deps]: ContainerData<Deps[K], any, any>;
+	[K in keyof Deps]: ContainerData<Deps[K], any, any> | Deps[K];
 };
 
 export type MapTuple<T extends [...any[]], NewValue> = {
@@ -97,6 +124,10 @@ export type CombineTuplesToMap<
 
 export type UnknownGuard<T> = T extends Dependencies ? T : never;
 
+function isContainer(v: any): v is Container<any, any, any> {
+	return v?.[ContainerSymbol] === true;
+}
+
 export function createContainer<
 	Type,
 	Deps extends Dependencies,
@@ -115,18 +146,39 @@ export function createContainer<
 		...containerData,
 		register: ((
 			key: Key | object,
-			container?: ContainerData<any, any, any>
+			container?: ContainerData<any, any, any> | any
 		) => {
 			return createContainer({
 				...containerData,
 				registeredDeps: {
 					...containerData.registeredDeps,
-					...(typeof key === 'object' ? key : { [key]: container }),
+					...(typeof key === 'object'
+						? Object.fromEntries(
+								getAllKeys(key).map((depKey) => [
+									depKey,
+									isContainer((key as any)[depKey])
+										? (key as any)[depKey]
+										: constant((key as any)[depKey]),
+								])
+						  )
+						: {
+								[key]: isContainer(container)
+									? container
+									: constant(container),
+						  }),
 				},
 			});
 		}) as Register<Type, Deps, RegisteredDeps>,
 		resolve: ((key?: Key) => innerResolve(key)) as any,
+		[ContainerSymbol]: true,
 	};
+}
+
+export function constant<T>(value: T) {
+	return createContainer({
+		registeredDeps: {},
+		getValue: () => value,
+	}) as Container<T, {}, {}>;
 }
 
 function createResolve(containerData: ContainerData<any, any, any>) {
