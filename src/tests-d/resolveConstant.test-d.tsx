@@ -1,5 +1,5 @@
-import { expectType, expectError, expectNotAssignable } from 'tsd';
-import { Class, constant, NotRegisteredDependenciesError } from '..';
+import { expectType, expectError } from 'tsd';
+import { Class, constant } from '..';
 
 class C1 {
 	constructor(public p1: string) {}

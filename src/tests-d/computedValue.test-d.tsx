@@ -2,8 +2,8 @@ import { expectType } from 'tsd';
 import {
 	Container,
 	constant,
-	NotRegisteredDependenciesError,
 	computedValue,
+	ResolveWithRequiredDeps,
 } from '..';
 
 export function ofComputedValueWithoutDeps() {
@@ -20,9 +20,12 @@ export function ofComputedValueOneDep() {
 }
 
 export function ofComputedValueOneDepNoRegistered() {
-	expectType<NotRegisteredDependenciesError<{ dep1: number }>>(
-		computedValue((p: number) => ({ value: p }), 'dep1').resolve
-	);
+	expectType<
+		ResolveWithRequiredDeps<
+			{ dep1: number } & { dep1?: number },
+			{ value: number }
+		>
+	>(computedValue((p: number) => ({ value: p }), 'dep1').resolve);
 }
 
 export function ofComputedValueTwoDep() {
@@ -59,7 +62,12 @@ export function ofComputedValueObjectOneDep() {
 }
 
 export function ofComputedValueObjectOneDepNoRegistered() {
-	expectType<NotRegisteredDependenciesError<{ dep1: number }>>(
+	expectType<
+		ResolveWithRequiredDeps<
+			{ dep1: number } & { dep1?: number },
+			{ value: number }
+		>
+	>(
 		computedValue(({ p }: { p: number }) => ({ value: p }), { p: 'dep1' })
 			.resolve
 	);

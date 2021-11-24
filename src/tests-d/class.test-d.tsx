@@ -1,5 +1,5 @@
-import { expectType } from 'tsd';
-import { Class, Container, constant, NotRegisteredDependenciesError } from '..';
+import { expectType, expectAssignable, expectError } from 'tsd';
+import { Class, Container, constant, ResolveWithRequiredDeps } from '..';
 
 class C0 {}
 
@@ -20,9 +20,9 @@ export function ofClassOneDep() {
 }
 
 export function ofClassOneDepNoRegistered() {
-	expectType<NotRegisteredDependenciesError<{ dep1: string }>>(
-		Class(C1, 'dep1').resolve
-	);
+	expectType<C1>(Class(C1, 'dep1').resolve({ dep1: 'sdg' }));
+
+	expectError(Class(C1, 'dep1').resolve({}));
 }
 
 class C2 {
@@ -43,13 +43,19 @@ export function ofClassTwoDep() {
 }
 
 export function ofClassTwoDepNoRegistered() {
-	expectType<NotRegisteredDependenciesError<{ dep1: string; dep2: number }>>(
-		Class(C2, 'dep1', 'dep2').resolve
-	);
+	expectType<
+		ResolveWithRequiredDeps<
+			{ dep1: string; dep2: number } & { dep1?: string; dep2?: number },
+			C2
+		>
+	>(Class(C2, 'dep1', 'dep2').resolve);
 
-	expectType<NotRegisteredDependenciesError<{ dep1: string }>>(
-		Class(C2, 'dep1', 'dep2').register('dep2', constant(123)).resolve
-	);
+	expectType<
+		ResolveWithRequiredDeps<
+			{ dep1: string } & { dep1?: string; dep2?: number },
+			C2
+		>
+	>(Class(C2, 'dep1', 'dep2').register('dep2', constant(123)).resolve);
 }
 
 class C1Object {
@@ -68,7 +74,7 @@ export function ofClassObjectOneDep() {
 }
 
 export function ofClassObjectOneDepNoRegistered() {
-	expectType<NotRegisteredDependenciesError<{ dep1: string }>>(
+	expectAssignable<ResolveWithRequiredDeps<{ dep1: string }, C1Object>>(
 		Class(C1Object, { p1: 'dep1' }).resolve
 	);
 }
@@ -91,11 +97,11 @@ export function ofClassObjectTwoDep() {
 }
 
 export function ofClassObjectTwoDepNoRegistered() {
-	expectType<NotRegisteredDependenciesError<{ dep1: string; dep2: number }>>(
-		Class(C2Object, { p1: 'dep1', p2: 'dep2' }).resolve
-	);
+	expectAssignable<
+		ResolveWithRequiredDeps<{ dep1: string; dep2: number }, C2Object>
+	>(Class(C2Object, { p1: 'dep1', p2: 'dep2' }).resolve);
 
-	expectType<NotRegisteredDependenciesError<{ dep1: string }>>(
+	expectAssignable<ResolveWithRequiredDeps<{ dep1: string }, C2Object>>(
 		Class(C2Object, { p1: 'dep1', p2: 'dep2' }).register(
 			'dep2',
 			constant(123)

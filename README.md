@@ -151,6 +151,15 @@ const container = Class(SomeClass, 'dep1', 'dep2')
 	});
 ```
 
+If a container has unregistered dependencies you can pass them directly to the `resolve` meethod to create a main value of the container.
+
+```typescript
+const instance = Class(SomeClass, 'dep1', 'dep2').resolve({
+	dep1: 'myStringValue',
+	dep2: 123,
+});
+```
+
 Also you can create any declared dependency. To do that you need to pass a token of the dependency.
 
 ```typescript

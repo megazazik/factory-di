@@ -20,35 +20,27 @@ export type Container<
 	RegisteredDeps extends Record<Key, ContainerData<any, any, any>>
 > = ContainerData<Type, Deps, RegisteredDeps> & {
 	register: Register<Type, Deps, RegisteredDeps>;
-	resolve: Resolve<Type, Deps, RegisteredDeps>;
+	resolve: Resolve<
+		Type,
+		FlatRegisteredDependencies<RegisteredDeps>,
+		RequiredDepsOfContainer<Deps, RegisteredDeps>
+	>;
 	[ContainerSymbol]: true;
 };
 
-export type Resolve<
-	MainType,
-	Deps,
-	RegisteredDeps extends Record<Key, ContainerData<any, any, any>>
-> = FlatRegisteredDependencies<RegisteredDeps> extends RequiredDepsOfContainer<
-	Deps,
-	RegisteredDeps
->
-	? {
-			(): MainType;
-			<K extends keyof RequiredDepsOfContainer<Deps, RegisteredDeps>>(
-				key: K
-			): RequiredDepsOfContainer<Deps, RegisteredDeps>[K];
-	  }
-	: NotRegisteredDependenciesError<
-			Omit<
-				RequiredDepsOfContainer<Deps, RegisteredDeps>,
-				keyof FlatRegisteredDependencies<RegisteredDeps>
-			>
-	  >;
+export type Resolve<MainType, FlatRegisteredDeps, FlatRequiredDeps> =
+	FlatRegisteredDeps extends FlatRequiredDeps
+		? {
+				(): MainType;
+				<K extends keyof FlatRequiredDeps>(key: K): FlatRequiredDeps[K];
+		  }
+		: ResolveWithRequiredDeps<
+				Omit<FlatRequiredDeps, keyof FlatRegisteredDeps> &
+					Partial<FlatRequiredDeps>,
+				MainType
+		  >;
 
-export type NotRegisteredDependenciesError<NotRegistered> =
-	'Not registered dependencies' & {
-		missingKeys?: keyof NotRegistered;
-	};
+export type ResolveWithRequiredDeps<Deps, Value> = (deps: Deps) => Value;
 
 export type Register<
 	Type,
@@ -142,34 +134,42 @@ export function createContainer<
 		return newResolve(key);
 	};
 
+	const register = ((
+		key: Key | object,
+		container?: ContainerData<any, any, any> | any
+	) => {
+		return createContainer({
+			...containerData,
+			registeredDeps: {
+				...containerData.registeredDeps,
+				...(typeof key === 'object'
+					? Object.fromEntries(
+							getAllKeys(key).map((depKey) => [
+								depKey,
+								isContainer((key as any)[depKey])
+									? (key as any)[depKey]
+									: constant((key as any)[depKey]),
+							])
+					  )
+					: {
+							[key]: isContainer(container)
+								? container
+								: constant(container),
+					  }),
+			},
+		});
+	}) as any;
+
 	return {
 		...containerData,
-		register: ((
-			key: Key | object,
-			container?: ContainerData<any, any, any> | any
-		) => {
-			return createContainer({
-				...containerData,
-				registeredDeps: {
-					...containerData.registeredDeps,
-					...(typeof key === 'object'
-						? Object.fromEntries(
-								getAllKeys(key).map((depKey) => [
-									depKey,
-									isContainer((key as any)[depKey])
-										? (key as any)[depKey]
-										: constant((key as any)[depKey]),
-								])
-						  )
-						: {
-								[key]: isContainer(container)
-									? container
-									: constant(container),
-						  }),
-				},
-			});
-		}) as Register<Type, Deps, RegisteredDeps>,
-		resolve: ((key?: Key) => innerResolve(key)) as any,
+		register,
+		resolve: ((key?: Key) => {
+			// переданы новые зависимости
+			if (typeof key === 'object') {
+				return register(key).resolve();
+			}
+			return innerResolve(key);
+		}) as any,
 		[ContainerSymbol]: true,
 	};
 }

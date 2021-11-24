@@ -2,9 +2,9 @@ import { expectType } from 'tsd';
 import {
 	Container,
 	constant,
-	NotRegisteredDependenciesError,
 	FactoryResolve,
 	factory,
+	ResolveWithRequiredDeps,
 } from '..';
 
 export function ofFactoryWithoutDeps() {
@@ -23,7 +23,12 @@ export function ofFactoryOneDep() {
 }
 
 export function ofFactoryOneDepNoRegistered() {
-	expectType<NotRegisteredDependenciesError<{ dep1: number }>>(
+	expectType<
+		ResolveWithRequiredDeps<
+			{ dep1: number } & { dep1?: number },
+			{ value: number }
+		>
+	>(
 		factory((resolve: FactoryResolve<{ dep1: number }>) => ({
 			value: resolve('dep1'),
 		})).resolve

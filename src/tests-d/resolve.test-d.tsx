@@ -1,5 +1,5 @@
-import { expectType, expectError, expectNotAssignable } from 'tsd';
-import { Class, constant, NotRegisteredDependenciesError } from '..';
+import { expectType, expectError } from 'tsd';
+import { Class, constant, ResolveWithRequiredDeps } from '..';
 
 class C1 {
 	constructor(public p1: string) {}
@@ -30,7 +30,17 @@ export function ofClassChildrenDeps() {
 	const c2Container = Class(C2, 'c2Dep1', 'c2Dep2');
 	const c3Container = Class(C3, 'depC2', 'depP1');
 
-	expectType<NotRegisteredDependenciesError<{ c2Dep2: number }>>(
+	expectType<
+		ResolveWithRequiredDeps<
+			{ c2Dep2: number } & {
+				depC2?: C2;
+				depP1?: number;
+				c2Dep1?: string;
+				c2Dep2?: number;
+			},
+			C3
+		>
+	>(
 		c3Container
 			.register(
 				'depC2',
@@ -39,7 +49,17 @@ export function ofClassChildrenDeps() {
 			.register('depP1', constant(123)).resolve
 	);
 
-	expectType<NotRegisteredDependenciesError<{ depP1: number }>>(
+	expectType<
+		ResolveWithRequiredDeps<
+			{ depP1: number } & {
+				depC2?: C2;
+				depP1?: number;
+				c2Dep1?: string;
+				c2Dep2?: number;
+			},
+			C3
+		>
+	>(
 		c3Container.register(
 			'depC2',
 			c2Container
@@ -48,7 +68,17 @@ export function ofClassChildrenDeps() {
 		).resolve
 	);
 
-	expectType<NotRegisteredDependenciesError<{ depP1: number }>>(
+	expectType<
+		ResolveWithRequiredDeps<
+			{ depP1: number } & {
+				depC2?: C2;
+				depP1?: number;
+				c2Dep1?: string;
+				c2Dep2?: number;
+			},
+			C3
+		>
+	>(
 		c3Container
 			.register(
 				'depC2',
@@ -57,7 +87,17 @@ export function ofClassChildrenDeps() {
 			.register('c2Dep2', constant(123)).resolve
 	);
 
-	expectType<NotRegisteredDependenciesError<{ depP1: number }>>(
+	expectType<
+		ResolveWithRequiredDeps<
+			{ depP1: number } & {
+				depC2?: C2;
+				depP1?: number;
+				c2Dep1?: string;
+				c2Dep2?: number;
+			},
+			C3
+		>
+	>(
 		c3Container
 			.register(
 				'depC2',
@@ -66,17 +106,18 @@ export function ofClassChildrenDeps() {
 			.register('c2Dep2', constant(123)).resolve
 	);
 
-	expectNotAssignable<NotRegisteredDependenciesError<any>>(
+	expectType<C3>(
 		c3Container
 			.register(
 				'depC2',
 				c2Container.register('c2Dep1', constant('sdfsdf'))
 			)
 			.register('c2Dep2', constant(123))
-			.register('depP1', constant(123)).resolve
+			.register('depP1', constant(123))
+			.resolve()
 	);
 
-	expectNotAssignable<NotRegisteredDependenciesError<any>>(
+	expectType<C3>(
 		c3Container
 			.register(
 				'depC2',
@@ -84,7 +125,8 @@ export function ofClassChildrenDeps() {
 					.register('c2Dep1', constant('sdfsdf'))
 					.register('c2Dep2', constant(123))
 			)
-			.register('depP1', constant(123)).resolve
+			.register('depP1', constant(123))
+			.resolve()
 	);
 }
 
@@ -104,17 +146,36 @@ export function ofClassGrandChildrenDeps() {
 	const c4Container = Class(C4, 'depC3').register('depC3', c3Container);
 
 	expectType<
-		NotRegisteredDependenciesError<{ depP1: number; c2Dep2: number }>
+		ResolveWithRequiredDeps<
+			{ depP1: number; c2Dep2: number } & {
+				depP1?: number;
+				c2Dep2?: number;
+				depC3?: C3;
+				depC2?: C2;
+				c2Dep1?: string;
+			},
+			C4
+		>
 	>(c4Container.resolve);
 
-	expectType<NotRegisteredDependenciesError<{ depP1: number }>>(
-		c4Container.register('c2Dep2', constant(908)).resolve
-	);
+	expectType<
+		ResolveWithRequiredDeps<
+			{ depP1: number } & {
+				depP1?: number;
+				c2Dep2?: number;
+				depC3?: C3;
+				depC2?: C2;
+				c2Dep1?: string;
+			},
+			C4
+		>
+	>(c4Container.register('c2Dep2', constant(908)).resolve);
 
-	expectNotAssignable<NotRegisteredDependenciesError<any>>(
+	expectType<C4>(
 		c4Container
 			.register('depP1', constant(123))
-			.register('c2Dep2', constant(908)).resolve
+			.register('c2Dep2', constant(908))
+			.resolve()
 	);
 }
 
@@ -137,22 +198,24 @@ export function ofClassOverrideDeps() {
 		}
 	}
 
-	expectNotAssignable<NotRegisteredDependenciesError<any>>(
+	expectType<C5>(
 		c5Container
 			.register('depC3', c3Container)
 			.register('depC6', c6Container.register('depC2', Class(C2Child)))
-			.register('c3Number', constant(34)).resolve
+			.register('c3Number', constant(34))
+			.resolve()
 	);
 
-	expectNotAssignable<NotRegisteredDependenciesError<any>>(
+	expectType<C5>(
 		c5Container
 			.register('depC3', c3Container)
 			.register('depC6', c6Container)
 			.register('c3Number', constant(34))
-			.register('depC2', Class(C2Child)).resolve
+			.register('depC2', Class(C2Child))
+			.resolve()
 	);
 
-	expectNotAssignable<NotRegisteredDependenciesError<any>>(
+	expectType<C5>(
 		c5Container
 			.register(
 				'depC3',
@@ -162,10 +225,11 @@ export function ofClassOverrideDeps() {
 			.register('c3Number', constant(34))
 			.register('depC2', Class(C2Child))
 			.register('c2Number', constant(123))
-			.register('c2String', constant('sdf')).resolve
+			.register('c2String', constant('sdf'))
+			.resolve()
 	);
 
-	expectNotAssignable<NotRegisteredDependenciesError<any>>(
+	expectType<C5>(
 		c5Container
 			.register(
 				'depC3',
@@ -173,11 +237,22 @@ export function ofClassOverrideDeps() {
 			)
 			.register('depC6', c6Container)
 			.register('c3Number', constant(34))
-			.register('depC2', Class(C2Child)).resolve
+			.register('depC2', Class(C2Child))
+			.resolve()
 	);
 
 	expectType<
-		NotRegisteredDependenciesError<{ c2String: String; c2Number: number }>
+		ResolveWithRequiredDeps<
+			{ c2String: string; c2Number: number } & {
+				c2String?: string;
+				c2Number?: number;
+				depC3?: C3;
+				depC6?: C6;
+				depC2?: C2;
+				c3Number?: number;
+			},
+			C5
+		>
 	>(
 		c5Container
 			.register(
@@ -188,7 +263,17 @@ export function ofClassOverrideDeps() {
 			.register('c3Number', constant(34)).resolve
 	);
 
-	expectType<NotRegisteredDependenciesError<{ c3Number: number }>>(
+	expectType<
+		ResolveWithRequiredDeps<
+			{ c3Number: number } & {
+				depC3?: C3;
+				depC6?: C6;
+				depC2?: C2;
+				c3Number?: number;
+			},
+			C5
+		>
+	>(
 		c5Container
 			.register(
 				'depC3',
@@ -198,7 +283,7 @@ export function ofClassOverrideDeps() {
 			.register('depC2', Class(C2Child)).resolve
 	);
 
-	expectNotAssignable<NotRegisteredDependenciesError<any>>(
+	expectType<C5>(
 		c5Container
 			.register(
 				'depC3',
@@ -206,7 +291,8 @@ export function ofClassOverrideDeps() {
 			)
 			.register('depC6', c6Container)
 			.register('depC2', Class(C2Child))
-			.register('c3Number', constant(34)).resolve
+			.register('c3Number', constant(34))
+			.resolve()
 	);
 }
 
