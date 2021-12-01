@@ -90,3 +90,55 @@ tape('ofClass. Nested. Object', (t) => {
 
 	t.end();
 });
+
+tape('ofClass. Nested. Object. No tokens', (t) => {
+	class Child1 {
+		constructor(public params: { pnStr: string }) {}
+	}
+
+	class Child2 {
+		constructor(public params: { pn2: boolean }) {}
+	}
+
+	class Parent {
+		constructor(
+			public params: {
+				pdep1: number;
+				pnested1: Child1;
+				pnested2: Child2;
+			}
+		) {}
+	}
+
+	const container = Class(Parent, {
+		pdep1: constant(154),
+		pnested1: 'nested1',
+		pnested2: Class(Child2, { pn2: constant(true) }),
+	})
+		.register('nested1', Class(Child1, { pnStr: 'pnStr1' }))
+		.register('pnStr1', constant('nStrValue'));
+
+	const parent = container.resolve();
+
+	t.ok(parent instanceof Parent);
+
+	t.equal(parent.params.pdep1, 154);
+
+	t.ok(parent.params.pnested1 instanceof Child1);
+	t.deepEqual(parent.params.pnested1.params, { pnStr: 'nStrValue' });
+
+	t.ok(parent.params.pnested2 instanceof Child2);
+	t.deepEqual(parent.params.pnested2.params, { pn2: true });
+
+	t.ok(container.resolve('nested1') instanceof Child1);
+	t.deepEqual(container.resolve('nested1').params, { pnStr: 'nStrValue' });
+
+	t.ok(container.resolve('pnested2') instanceof Child2);
+	t.deepEqual(container.resolve('pnested2').params, { pn2: true });
+
+	t.equal(container.resolve('pnStr1'), 'nStrValue');
+	t.equal(container.resolve('pdep1'), 154);
+	t.equal(container.resolve('pn2'), true);
+
+	t.end();
+});

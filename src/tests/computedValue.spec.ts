@@ -158,3 +158,51 @@ tape('ofComputedValue. Nested. Object', (t) => {
 
 	t.end();
 });
+
+tape('ofComputedValue. Nested. Object. No tokens', (t) => {
+	const container = computedValue(
+		({
+			pdep1,
+			pnested1,
+			pnested2,
+		}: {
+			pdep1: number;
+			pnested1: { nestedValue: string };
+			pnested2: boolean;
+		}) => ({
+			value: pdep1,
+			n1: pnested1,
+			n2: pnested2,
+		}),
+		{
+			pdep1: constant(154),
+			pnested1: 'nested1',
+			pnested2: computedValue(({ pn2 }: { pn2: boolean }) => pn2, {
+				pn2: 'n2',
+			}),
+		}
+	)
+		.register(
+			'nested1',
+			computedValue(
+				({ pnStr }: { pnStr: string }) => ({
+					nestedValue: pnStr,
+				}),
+				{ pnStr: constant('nStrValue') }
+			)
+		)
+		.register('n2', true);
+
+	t.deepEqual(container.resolve(), {
+		value: 154,
+		n1: { nestedValue: 'nStrValue' },
+		n2: true,
+	});
+
+	t.deepEqual(container.resolve('nested1'), { nestedValue: 'nStrValue' });
+	t.equal(container.resolve('pnStr'), 'nStrValue');
+	t.equal(container.resolve('pdep1'), 154);
+	t.equal(container.resolve('n2'), true);
+
+	t.end();
+});

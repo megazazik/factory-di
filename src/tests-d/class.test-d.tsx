@@ -1,5 +1,11 @@
 import { expectType, expectAssignable, expectError } from 'tsd';
-import { Class, Container, constant, ResolveWithRequiredDeps } from '..';
+import {
+	Class,
+	Container,
+	constant,
+	ResolveWithRequiredDeps,
+	ContainerData,
+} from '..';
 
 class C0 {}
 
@@ -107,4 +113,138 @@ export function ofClassObjectTwoDepNoRegistered() {
 			constant(123)
 		).resolve
 	);
+}
+
+export function ofClassObjectOneDepNoToken() {
+	expectType<
+		Container<
+			C1Object,
+			{ p1: string },
+			{
+				p1: Container<string, {}, {}>;
+			}
+		>
+	>(Class(C1Object, { p1: constant('dep1') }));
+
+	expectType<C1Object>(Class(C1Object, { p1: constant('dep1') }).resolve());
+}
+
+class WithC1 {
+	constructor(public params: { c1: C1 }) {}
+}
+
+export function ofClassObjectFullEmbeddedDepNoToken() {
+	expectType<
+		Container<
+			WithC1,
+			{ c1: C1 },
+			{
+				c1: Container<
+					C1,
+					{ p1: string },
+					{ p1: Container<string, {}, {}> }
+				>;
+			}
+		>
+	>(
+		Class(WithC1, {
+			c1: Class(C1, 'p1').register('p1', constant('sdfsf')),
+		})
+	);
+
+	expectType<WithC1>(
+		Class(WithC1, {
+			c1: Class(C1, 'p1').register('p1', constant('sdfsf')),
+		}).resolve()
+	);
+}
+
+export function ofClassObjectNoFullEmbeddedDepNoToken() {
+	expectType<
+		Container<
+			WithC1,
+			{ c1: C1 },
+			{
+				c1: Container<C1, { p1: string }, {}>;
+			}
+		>
+	>(
+		Class(WithC1, {
+			c1: Class(C1, 'p1'),
+		})
+	);
+
+	expectType<WithC1>(
+		Class(WithC1, {
+			c1: Class(C1, 'p1'),
+		}).resolve({ p1: 'sdvdfv' })
+	);
+
+	expectError(
+		Class(WithC1, {
+			c1: Class(C1, 'p1'),
+		}).resolve()
+	);
+}
+
+export function ofClassObjectTwoDepNoToken() {
+	expectType<
+		Container<
+			C2Object,
+			{ p1: string } & { p2: number },
+			{
+				p1: Container<string, {}, {}>;
+				p2: Container<number, {}, {}>;
+			}
+		>
+	>(Class(C2Object, { p1: constant('123'), p2: constant(312) }));
+
+	expectType<C2Object>(
+		Class(C2Object, {
+			p1: constant('dep1'),
+			p2: constant(321),
+		}).resolve()
+	);
+}
+
+export function ofClassWrongParams() {
+	expectError(
+		Class(C2Object, {
+			p1: true,
+			p2: constant(321),
+		})
+	);
+
+	expectError(
+		Class(C2Object, {
+			p1: constant(321),
+			p2: constant(321),
+		})
+	);
+
+	/** @todo сделать, чтобы проходил один из следующих тестов */
+	// expectType<
+	// 	Container<
+	// 		C2Object,
+	// 		{ p1: string } & { p2: number },
+	// 		{
+	// 			p1: Container<string, {}, {}>;
+	// 			p2: Container<number, {}, {}>;
+	// 		}
+	// 	>
+	// >(
+	// 	Class(C2Object, {
+	// 		p1: constant('123'),
+	// 		p2: constant(312),
+	// 		p3: constant(123),
+	// 	})
+	// );
+
+	// expectError(
+	// 	Class(C2Object, {
+	// 		p1: constant('321'),
+	// 		p2: constant(321),
+	// 		p3: constant(321),
+	// 	})
+	// );
 }

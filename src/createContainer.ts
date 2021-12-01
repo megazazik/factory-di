@@ -245,4 +245,8 @@ function getContainerDataResolves(
 
 export type ObjectValuesIntersection<T> = UnionToIntersection<T[keyof T]>;
 
+export type ContainerDataValueKeys<T> = {
+	[P in keyof T]: T[P] extends ContainerData<any, any, any> ? P : never;
+}[keyof T];
+
 /** @todo дописать проверку на добавление одинаковых ключей для зависимостей разных типов */

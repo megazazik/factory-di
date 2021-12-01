@@ -321,6 +321,39 @@ myClassInstance.params.strParam; // 'strValue'
 myClassInstance.params.numParam; // 123
 ```
 
+Also dependencies can be registered inside the `Class` function call. Then field names of the class first parameter will be used as tokens.
+
+```typescript
+interface MyClassParams {
+	strParam: string;
+	numParam: number;
+}
+
+class MyClass {
+	constructor(public params: MyClassParams) {}
+}
+
+/**
+ * container has 2 unregistered dependencies with tokens
+ *  - param1Token
+ *  - param2Token
+ */
+const container1 = Class(MyClass, {
+	strParam: 'param1Token',
+	numParam: 'param2Token',
+});
+
+/**
+ * container has 2 registered dependencies with tokens
+ *  - strParam
+ *  - numParam
+ */
+const container2 = Class(MyClass, {
+	strParam: constant('strValue'),
+	numParam: constant(123),
+});
+```
+
 ## computedValue
 
 The `computedValue` function can be used to create containers for any computed values.
@@ -376,14 +409,14 @@ function computedValue(
 Example.
 
 ```typescript
-interface MyClassParams {
+interface MyFactoryMethodParams {
 	strParam: string;
 	numParam: number;
 }
 
-const myContainer = Class(
+const myContainer = computedValue(
 	// function can return any value
-	(params: MyClassParams) => new MyClass(params),
+	(params: MyFactoryMethodParams) => new MyClass(params),
 	{
 		strParam: 'param1Token',
 		numParam: 'param2Token',
@@ -397,6 +430,41 @@ const myValue = myContainer
 
 myValue.params.strParam; // 'strValue'
 myValue.params.numParam; // 123
+```
+
+Also dependencies can be registered inside the `computedValue` function call. Then field names of the factory method first parameter will be used as tokens.
+
+```typescript
+interface MyFactoryMethodParams {
+	strParam: string;
+	numParam: number;
+}
+
+/**
+ * container has 2 unregistered dependencies with tokens
+ *  - param1Token
+ *  - param2Token
+ */
+const container1 = computedValue(
+	(params: MyFactoryMethodParams) => new MyClass(params),
+	{
+		strParam: 'param1Token',
+		numParam: 'param2Token',
+	}
+);
+
+/**
+ * container has 2 registered dependencies with tokens
+ *  - strParam
+ *  - numParam
+ */
+const container2 = computedValue(
+	(params: MyFactoryMethodParams) => new MyClass(params),
+	{
+		strParam: constant('strValue'),
+		numParam: constant(123),
+	}
+);
 ```
 
 ## constant
