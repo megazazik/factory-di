@@ -1,3 +1,14 @@
+# [1.0.0](https://github.com/megazazik/factory-di/compare/v0.2.2...v1.0.0) (2021-12-01)
+
+
+### Features
+
+* dependencies can be registered during container initialization ([03c2449](https://github.com/megazazik/factory-di/commit/03c244999d86233b921c15058b935f67cf8f00e9))
+* resolve method can get unregistered dependencies now ([54c3f8c](https://github.com/megazazik/factory-di/commit/54c3f8cc96efe972ac0ab8900679b2912bfd07be))
+* simple value can be registered without the 'constant' function call ([52bdc87](https://github.com/megazazik/factory-di/commit/52bdc87cda279a7ccab0765f155fae4c5fd72ae5))
+
+
+
 ## [0.2.2](https://github.com/megazazik/factory-di/compare/v0.2.1...v0.2.2) (2021-05-25)
 
 
