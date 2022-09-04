@@ -142,7 +142,7 @@ export function ofClassObjectFullEmbeddedDepNoToken() {
 				c1: Container<
 					C1,
 					{ p1: string },
-					{ p1: Container<string, {}, {}> }
+					{ p1: Container<'sdfsf', {}, {}> }
 				>;
 			}
 		>
