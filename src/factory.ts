@@ -64,7 +64,10 @@ export type FactoryParamsList<
 	[K in keyof Args]: D[Args[K]];
 };
 
-export const factory: Factory = (factory: any) => {
+export const factory: Factory = (
+	factory: ((...args: any[]) => any) | ContainerData<any, any, any>,
+	...params: any[]
+) => {
 	if (typeof factory === 'function') {
 		return createContainer({
 			registeredDeps: {},
@@ -72,5 +75,40 @@ export const factory: Factory = (factory: any) => {
 		});
 	}
 
-	return null as any;
+	if (typeof params[0] === 'object') {
+		const argsMap = Object.fromEntries(
+			Object.entries(params[0]).map(([k, v]) => [v, k])
+		);
+		// when params is object, not array
+		return createContainer({
+			registeredDeps: factory.registeredDeps,
+			getValue: (parentResolve) => (args: Record<Key, Key>) => {
+				const resolve: typeof parentResolve = (k) => {
+					if (k in argsMap) {
+						return args[argsMap[k]];
+					}
+
+					return parentResolve(k);
+				};
+				return factory.getValue(resolve);
+			},
+		}) as any;
+	}
+
+	const argsMap = Object.fromEntries(params.map((v, i) => [v, i]));
+	return createContainer({
+		registeredDeps: factory.registeredDeps,
+		getValue:
+			(parentResolve) =>
+			(...args: Key[]) => {
+				const resolve: typeof parentResolve = (k) => {
+					if (k in argsMap) {
+						return args[argsMap[k]];
+					}
+
+					return parentResolve(k);
+				};
+				return factory.getValue(resolve);
+			},
+	}) as any;
 };
