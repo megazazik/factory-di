@@ -8,7 +8,7 @@ This library contains function to create some kind of Dependency Injection Conta
 -   [Simple example](#simple-example)
 -   [Containers](#containers)
 -   [Class](#class)
--   [computedValue](#computedValue)
+-   [computedValue](#computedvalue)
 -   [constant](#constant)
 -   [factory](#factory)
 -   [singleton](#singleton)
@@ -487,13 +487,17 @@ computedValue((num: number) => new MyClass(num), 'numValue')
 
 ## factory
 
-The `factory` function can be used to create Factory method or some Factories.
+The `factory` function can be used to create Factory method or some Factories. It is useful when you need to create multiple instances of some dependency in runtime dynamically.
+
+There are two ways to use the `factory` function - via `create` method or with a child container.
+
+### create method
 
 ```typescript
 type Resolve = (token: string | symbol) => any;
 
 function factory(
-	// the only argument - a function which returns a value (usually a factory or a factory method)
+	// the only argument is a function which returns a value (usually a factory or a factory method)
 	create: (resolve: Resolve): any,
 ): Container;
 ```
@@ -507,13 +511,9 @@ import { FactoryResolve, factory } from 'factory-di';
 import { repositoryContainer } from './repository';
 import { MyClass } from './myClass';
 
-// dependencies of the factory method
-interface MyFactoryMethodDependencies {
-	repository: Repository;
-}
-
 const myFactoryMethod = factory(
-	(resolve: FactoryResolve<MyFactoryMethodDependencies>) => {
+	// via FactoryResolve type you can declare needed dependencies
+	(resolve: FactoryResolve<{ repository: Repository }>) => {
 		// the factory method receives an id and return an instance
 		return (id: string) =>
 			new MyClass({
@@ -528,6 +528,151 @@ const myFactoryMethod = factory(
 
 const myClassInstance1 = myFactoryMethod('id1');
 const myClassInstance2 = myFactoryMethod('id2');
+```
+
+### with child container
+
+In this example ShoppingCart needs to create multiple instances of ShoppingItem in runtime.
+
+```typescript
+import { factory, Class } from 'factory-di';
+
+class ShoppingItem {
+	constructor(
+		public productId: number,
+		public amount: number,
+	){}
+}
+
+class ShoppingCart {
+	items: ShoppingItem[];
+
+
+	constructor(
+		// ShoppingCart needs a factory method for ShoppingItem
+		private itemFactory: (productId: number, amount: number) => ShoppingItem;
+	) {}
+
+	addItem(productId: number, amount: number): ShoppingItem {
+		// we need to create items in runtime
+		const newItem = this.itemFactory(productId, amount)
+		this.items.push(newItem);
+
+		return newItem;
+	}
+}
+
+// this container can create ShoppingItem
+const itemContainer = Class(ShoppingItem, 'shoppingItemProductId', 'shoppingItemAmount');
+
+// this container can create function  (productId, amount) => ShoppingItem
+const itemFactoryContainer = factory(itemContainer, 'shoppingItemProductId', 'shoppingItemAmount');
+
+const cartContainer = Class(ShoppingCart, 'shoppingItemFactory')
+	.register(
+		'shoppingItemFactory',
+		itemFactoryContainer,
+	);
+
+// creates a cart
+const cart = cartContainer.resolve();
+
+cart.addItem(321, 5); // ShoppingItem { productId: 321, amount: 5 }
+```
+
+The first argument of `factory` is a child container.
+The next arguments describe parameters of a new facrory method.
+The way to describe parameters of factory method is similar to describing tokens of `computedValue` or `Class`.
+
+#### without parameters
+
+```typescript
+class Car {
+	constructor(public manufacturer: string, public model: string) {}
+}
+
+// carContainer creates cars and requires two dependencies
+const carContainer = Class(Car, 'carManufacturer', 'carModel');
+
+// this container creates function: () => Car
+// and requires the same two dependencies - 'carManufacturer' and 'carModel'
+const carFactoryContainer = factory(carContainer);
+
+// so before using carFactory you should register these two deps
+const toyotaCamryFactory = carFactoryContainer
+	.register({
+		carManufacturer: 'toyota',
+		carModel: 'camry',
+	})
+	.resolve();
+
+// now you can use toyotaCamryFactory to create cars
+toyotaCamryFactory(); // Car { manufacturer: 'toyota', model: 'camry'}
+```
+
+#### list of parameters
+
+```typescript
+// by passing 'carModel' we define that factory method has one parameter
+// and its value will be passed as 'carModel' dependency to carContainer
+// carFactoryContainer creates function: (model) => Car
+// and requires the only dependency - 'carManufacturer'.
+const carFactoryContainer = factory(carContainer, 'carModel');
+
+// so before using carFactory you should register carManufacturer
+const toyotaFactory = carFactoryContainer
+	.register({
+		carManufacturer: 'toyota',
+	})
+	.resolve();
+
+toyotaFactory('camry'); // Car { manufacturer: 'toyota', model: 'camry'}
+toyotaFactory('corolla'); // Car { manufacturer: 'toyota', model: 'corolla'}
+```
+
+```typescript
+// this container creates function: (manufacturer, model) => Car
+const carFactoryContainer = factory(
+	carContainer,
+	'carManufacturer',
+	'carModel'
+);
+const carFactory = carFactoryContainer.resolve();
+
+carFactory('toyota', 'corolla'); // Car { manufacturer: 'toyota', model: 'corolla'}
+carFactory('ford', 'mondeo'); // Car { manufacturer: 'ford', model: 'mondeo'}
+```
+
+#### parameters as fields of object
+
+```typescript
+// by passing "{model: 'carModel'}" we define that factory method has one parameter
+// and its field 'model' will be passed as 'carModel' dependency to carContainer
+// carFactoryContainer creates function: ({ model }) => Car
+// and requires the only dependency - 'carManufacturer'.
+const carFactoryContainer = factory(carContainer, { model: 'carModel' });
+
+// so before using carFactory you should register carManufacturer
+const toyotaFactory = carFactoryContainer
+	.register({
+		carManufacturer: 'toyota',
+	})
+	.resolve();
+
+toyotaFactory({ model: 'camry' }); // Car { manufacturer: 'toyota', model: 'camry'}
+toyotaFactory({ model: 'corolla' }); // Car { manufacturer: 'toyota', model: 'corolla'}
+```
+
+```typescript
+// this container creates function: ({ manufacturer, model }) => Car
+const carFactoryContainer = factory(carContainer, {
+	manufacturer: 'carManufacturer',
+	model: 'carModel',
+});
+const carFactory = carFactoryContainer.resolve();
+
+carFactory({ manufacturer: 'toyota', model: 'corolla' }); // Car { manufacturer: 'toyota', model: 'corolla'}
+carFactory({ manufacturer: 'ford', model: 'mondeo' }); // Car { manufacturer: 'ford', model: 'mondeo'}
 ```
 
 ## singleton
