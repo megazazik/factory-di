@@ -1,3 +1,13 @@
+# [2.0.0](https://github.com/megazazik/factory-di/compare/v1.0.0...v2.0.0) (2023-08-06)
+
+
+### Features
+
+* **factory:** add implementation of factory from container ([8a0ecd5](https://github.com/megazazik/factory-di/commit/8a0ecd558de7a7d5625cb0d9e4df880fac25369e))
+* **factory:** add type tests for factory from container ([e4fef79](https://github.com/megazazik/factory-di/commit/e4fef79169596ef5a7b75cf2e3371f4da51f5354))
+
+
+
 # [1.0.0](https://github.com/megazazik/factory-di/compare/v0.2.2...v1.0.0) (2021-12-01)
 
 
