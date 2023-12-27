@@ -12,10 +12,12 @@ import {
 
 export type OfComputedValue = {
 	<T>(getValue: () => T): Container<T, {}, {}>;
+
 	<Params extends [...any[]], T, Keys extends MapTuple<Params, Key>>(
 		c: (...args: Params) => T,
 		...keys: Keys
 	): Container<T, UnknownGuard<CombineTuplesToMap<Keys, Params>>, {}>;
+
 	<
 		Params extends object,
 		T,

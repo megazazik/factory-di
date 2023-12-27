@@ -58,7 +58,10 @@ export function ofComputedValueTwoDep() {
 
 export function ofComputedValueObjectOneDep() {
 	expectType<Container<{ value: number }, { dep1: number }, {}>>(
-		computedValue(({ p }: { p: number }) => ({ value: p }), { p: 'dep1' })
+		computedValue(({ p }: { p: number }) => ({ value: p }), {
+			p: 'dep1',
+			p2: 'dfsdf', // wrong param
+		})
 	);
 }
 
