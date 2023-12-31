@@ -14,3 +14,17 @@ export type NumberKeysOnly<T extends [...Key[]]> = {
 };
 
 export type KeysTuple<T extends [...any[]]> = { [I in keyof T]: Key };
+
+export type UnionToIntersection<U> = (
+	U extends any ? (k: U) => void : never
+) extends (k: infer I) => void
+	? I
+	: never;
+
+/**
+ * Make a type assembled from several types/utilities more readable.
+ * (e.g. the type will be shown as the final resulting type instead of as a bunch of type utils wrapping the initial type).
+ */
+export type HumanReadableType<T> = T extends infer U
+	? { [K in keyof U]: U[K] }
+	: never;

@@ -1,11 +1,11 @@
 import { Container } from './container';
 import { DepsFromParamsList, Key, KeysTuple, NumberKeysOnly } from './types';
 
-export type OfComputedValue = {
-	<T>(getValue: () => T): Container<T, {}, {}>;
+export type OfClass = {
+	<T>(c: { new (): T }): Container<T, {}, {}>;
 
 	<Params extends object, T, const KeysMap extends DependenciesMap<Params>>(
-		c: (params: Params) => T,
+		c: { new (args: Params): T },
 		keys: KeysMap
 	): KeysMap extends Key // на случай, если передали токен, который соответствует типу первого параметра
 		? Container<T, { [KK in KeysMap]: Params }, {}>
@@ -30,7 +30,7 @@ export type OfComputedValue = {
 		  >;
 
 	<Params extends [...any[]], T, Keys extends KeysTuple<Params>>(
-		c: (...args: Params) => T,
+		c: { new (...args: Params): T },
 		...keys: Keys
 	): Container<T, DepsFromParamsList<NumberKeysOnly<Keys>, Params>, {}>;
 };
@@ -39,13 +39,34 @@ type DependenciesMap<Params extends object> = {
 	[K in keyof Params]: Key | Container<Params[K], any, any>;
 };
 
-export declare const computedValue: OfComputedValue;
-// export const res1 = computedValue(
-// 	(p1: string, p2?: number) => true,
-// 	'param1',
-// 	'param2'
-// );
-// export const res2 = computedValue((pp: { p1: string; p2?: number }) => true, {
-// 	p1: 'param1',
-// 	p2: 'asd',
-// });
+export const Class: OfClass = () => ({} as any);
+
+// export const Class: OfClass = (Constructor: any, ...argNames: string[]) => {
+// 	if (typeof argNames[0] === 'object') {
+// 		const registeredDeps = {} as any;
+// 		Object.entries(argNames[0]).forEach(([key, value]) => {
+// 			if (typeof value === 'object') {
+// 				registeredDeps[key] = value;
+// 			}
+// 		});
+
+// 		return createContainer({
+// 			registeredDeps,
+// 			getValue: (resolve: any) =>
+// 				new Constructor(
+// 					getAllKeys(argNames[0]).reduce((prev, key) => {
+// 						const value = (argNames[0] as any)[key];
+// 						return Object.assign(prev, {
+// 							[key]: resolve(
+// 								typeof value === 'object' ? key : value
+// 							),
+// 						});
+// 					}, {})
+// 				),
+// 		});
+// 	}
+// 	return createContainer({
+// 		registeredDeps: {},
+// 		getValue: (resolve) => new Constructor(...argNames.map(resolve)),
+// 	});
+// };
