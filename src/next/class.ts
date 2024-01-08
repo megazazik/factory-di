@@ -1,5 +1,11 @@
-import { Container } from './container';
-import { DepsFromParamsList, Key, KeysTuple, NumberKeysOnly } from './types';
+import {
+	Container,
+	DepsFromParamsList,
+	HumanReadableType,
+	Key,
+	KeysTuple,
+	NumberKeysOnly,
+} from './container';
 
 export type OfClass = {
 	<T>(c: { new (): T }): Container<T, {}, {}>;
@@ -32,7 +38,11 @@ export type OfClass = {
 	<Params extends [...any[]], T, Keys extends KeysTuple<Params>>(
 		c: { new (...args: Params): T },
 		...keys: Keys
-	): Container<T, DepsFromParamsList<NumberKeysOnly<Keys>, Params>, {}>;
+	): Container<
+		T,
+		HumanReadableType<DepsFromParamsList<NumberKeysOnly<Keys>, Params>>,
+		{}
+	>;
 };
 
 type DependenciesMap<Params extends object> = {

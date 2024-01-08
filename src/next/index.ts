@@ -1,4 +1,4 @@
 export * from './container';
-export * from './types';
+export * from './factory';
 export * from './computedValue';
 export * from './class';

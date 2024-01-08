@@ -181,4 +181,34 @@ export function ofComputedValueWrongParams() {
 			}
 		)
 	);
+
+	expectError(
+		computedValue(
+			({ dep1, dep2 }: { dep1: number; dep2: string }) => true,
+			{
+				dep1: constant(321),
+			}
+		)
+	);
+
+	expectError(
+		computedValue((dep1: number, dep2: string) => true, {
+			dep1: constant(321),
+		})
+	);
+
+	expectError(computedValue((dep1: number, dep2: string) => true, 'dep1'));
+
+	expectError(
+		computedValue(
+			(dep1: number, dep2: string) => true,
+			'dep1',
+			'dep2',
+			'dep3'
+		)
+	);
+
+	expectError(
+		computedValue((dep1: number, dep2: string) => true, 'dep1', 123)
+	);
 }

@@ -149,6 +149,12 @@ export function ofComputedValueWrongParams() {
 
 	expectError(
 		Class(C, {
+			dep2: constant('sdfsdf'),
+		})
+	);
+
+	expectError(
+		Class(C, {
 			dep1: true,
 			dep2: constant('sdfsdf'),
 		})
@@ -160,4 +166,11 @@ export function ofComputedValueWrongParams() {
 			dep2: constant('sdfsdf'),
 		})
 	);
+
+	class C1 {
+		constructor(dep1: number, dep2: string) {}
+	}
+
+	expectError(Class(C1, 'dep1'));
+	expectError(Class(C1, 'dep1', 'dep2', 'dep3'));
 }
