@@ -1,5 +1,5 @@
 import { expectType, expectError } from 'tsd';
-import { Container } from '../next';
+import { Container } from '..';
 
 declare const cBool: Container<boolean, {}, {}>;
 declare const cNum: Container<number, { b: boolean }, {}>;

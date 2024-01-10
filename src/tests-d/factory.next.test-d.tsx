@@ -6,7 +6,7 @@ import {
 	factory,
 	Resolve,
 	computedValue,
-} from '../next';
+} from '..';
 
 export function ofFactoryWithoutDeps() {
 	expectType<Container<string, {}, {}>>(factory(() => 'string'));

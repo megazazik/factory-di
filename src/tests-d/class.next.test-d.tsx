@@ -1,5 +1,5 @@
 import { expectError, expectType } from 'tsd';
-import { Container, Class, constant } from '../next';
+import { Container, Class, constant } from '..';
 
 export function ofComputedValueWithoutDeps() {
 	class C {

@@ -1,10 +1,5 @@
-import { constructorSymbol, createValueSymbol } from './innerMethods';
-import {
-	Dependencies,
-	Key,
-	Container /* , createContainer */,
-	HumanReadableType,
-} from './container';
+import { ContainerData, Dependencies, Key } from './containerData';
+import { Container, createContainer } from './createContainer';
 
 export type FactoryResolve<Params extends Record<Key, any>> = <
 	K extends keyof Params
@@ -13,14 +8,11 @@ export type FactoryResolve<Params extends Record<Key, any>> = <
 ) => Params[K];
 
 export type Factory = {
-	// factory(() => value)
-	<T>(factory: (getValue: FactoryResolve<{}>) => T): Container<T, {}, {}>;
-
 	// factory(container)
 	<
 		T,
 		D extends Dependencies,
-		RD extends Record<Key, Container<any, any, any>>
+		RD extends Record<Key, ContainerData<any, any, any>>
 	>(
 		container: Container<T, D, RD>
 	): Container<() => T, D, RD>;
@@ -28,28 +20,28 @@ export type Factory = {
 	<
 		T,
 		D extends Dependencies,
-		RD extends Record<Key, Container<any, any, any>>,
+		RD extends Record<Key, ContainerData<any, any, any>>,
 		ParamsMap extends Record<Key, keyof D>
 	>(
 		container: Container<T, D, RD>,
 		params: ParamsMap
 	): Container<
 		(params: FactoryParamsObject<ParamsMap, D>) => T,
-		HumanReadableType<Omit<D, ParamsMap[keyof ParamsMap]>>,
+		Omit<D, ParamsMap[keyof ParamsMap]>,
 		RD
 	>;
 	// factory(container, 'token1', 'token2')
 	<
 		T,
 		D extends Dependencies,
-		RD extends Record<Key, Container<any, any, any>>,
+		RD extends Record<Key, ContainerData<any, any, any>>,
 		const Args extends readonly (keyof D)[]
 	>(
 		container: Container<T, D, RD>,
 		...args: Args
 	): Container<
 		(...args: FactoryParamsList<Args, D>) => T,
-		HumanReadableType<Omit<D, Args[number]>>,
+		Omit<D, Args[number]>,
 		RD
 	>;
 	// factory((getValue) => getValue('token'))
@@ -73,14 +65,14 @@ export type FactoryParamsList<
 };
 
 export const factory: Factory = (
-	factory: ((...args: any[]) => any) | Container<any, any, any>,
+	factory: ((...args: any[]) => any) | ContainerData<any, any, any>,
 	...params: any[]
 ) => {
 	if (typeof factory === 'function') {
-		return Container[constructorSymbol](
-			(resolve) => factory((k: any) => resolve(k)?.value ?? undefined),
-			{}
-		);
+		return createContainer({
+			registeredDeps: {},
+			getValue: factory,
+		});
 	}
 
 	if (typeof params[0] === 'object') {
@@ -88,34 +80,35 @@ export const factory: Factory = (
 			Object.entries(params[0]).map(([k, v]) => [v, k])
 		);
 		// when params is object, not array
-		return Container[constructorSymbol](
-			(parentResolve) => (args: Record<Key, Key>) => {
+		return createContainer({
+			registeredDeps: factory.registeredDeps,
+			getValue: (parentResolve) => (args: Record<Key, Key>) => {
 				const resolve: typeof parentResolve = (k) => {
 					if (k in argsMap) {
-						return { value: args[argsMap[k]] };
+						return args[argsMap[k]];
 					}
 
 					return parentResolve(k);
 				};
-				return factory[createValueSymbol](resolve);
+				return factory.getValue(resolve);
 			},
-			{}
-		) as any;
+		}) as any;
 	}
 
 	const argsMap = Object.fromEntries(params.map((v, i) => [v, i]));
-	return Container[constructorSymbol](
-		(parentResolve) =>
+	return createContainer({
+		registeredDeps: factory.registeredDeps,
+		getValue:
+			(parentResolve) =>
 			(...args: Key[]) => {
 				const resolve: typeof parentResolve = (k) => {
 					if (k in argsMap) {
-						return { value: args[argsMap[k]] };
+						return args[argsMap[k]];
 					}
 
 					return parentResolve(k);
 				};
-				return factory[createValueSymbol](resolve);
+				return factory.getValue(resolve);
 			},
-		{}
-	) as any;
+	}) as any;
 };

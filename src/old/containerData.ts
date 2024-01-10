@@ -53,10 +53,11 @@ export type FlatRegisteredDependenciesUnion<
 > = [keyof Deps] extends [never]
 	? {}
 	: {
-			[K in keyof Deps]: { [KK in K]: ValueOfContainer<Deps[K]> } &
-				FlatRegisteredDependenciesUnion<
-					RegisteredDepsOfContainer<Deps[K]>
-				>;
+			[K in keyof Deps]: {
+				[KK in K]: ValueOfContainer<Deps[K]>;
+			} & FlatRegisteredDependenciesUnion<
+				RegisteredDepsOfContainer<Deps[K]>
+			>;
 	  }[keyof Deps];
 
 export type FlatRegisteredDependencies<

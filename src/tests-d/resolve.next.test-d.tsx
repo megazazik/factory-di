@@ -1,5 +1,5 @@
 import { expectType, expectError, expectAssignable } from 'tsd';
-import { computedValue, Resolve } from '../next';
+import { computedValue, Resolve } from '..';
 
 declare const v: any;
 
@@ -8,7 +8,6 @@ export function ofResolveTypeWithoutRequired() {
 	expectType<{
 		(): boolean;
 		(d: Partial<{}> & object): boolean;
-		<K extends never>(k: K): {}[K];
 	}>(v as Resolve<boolean, {}, never>);
 
 	expectType<boolean>((v as Resolve<boolean, {}, never>)());
@@ -16,19 +15,10 @@ export function ofResolveTypeWithoutRequired() {
 	expectType<{
 		(): boolean;
 		(d: { dep1?: number; dep2?: string } & object): boolean;
-		<K extends 'dep1' | 'dep2'>(k: K): { dep1: number; dep2: string }[K];
 	}>(v as Resolve<boolean, { dep1: number; dep2: string }, never>);
 
 	expectType<boolean>(
 		(v as Resolve<boolean, { dep1: number; dep2: string }, never>)()
-	);
-
-	expectType<number>(
-		(v as Resolve<boolean, { dep1: number; dep2: string }, never>)('dep1')
-	);
-
-	expectType<string>(
-		(v as Resolve<boolean, { dep1: number; dep2: string }, never>)('dep2')
 	);
 
 	expectType<boolean>(

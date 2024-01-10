@@ -1,5 +1,5 @@
 import { expectError, expectType } from 'tsd';
-import { Container, computedValue, constant } from '../next';
+import { Container, computedValue, constant } from '..';
 
 export function ofComputedValueWithoutDeps() {
 	expectType<Container<string, {}, {}>>(computedValue(() => 'string'));

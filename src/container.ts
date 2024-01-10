@@ -1,6 +1,8 @@
-const depsKey = Symbol('deps');
-const allDepsKey = Symbol('allDeps');
-const registeredDepsKey = Symbol('registeredDeps');
+import { constructorSymbol, createValueSymbol } from './innerMethods';
+
+declare const depsKey: unique symbol;
+declare const allDepsKey: unique symbol;
+declare const registeredDepsKey: unique symbol;
 
 export class Container<
 	Type,
@@ -14,21 +16,55 @@ export class Container<
 	[depsKey]: Deps;
 	[registeredDepsKey]: RegisteredDeps;
 	[allDepsKey]: AllDeps;
+	private _singltonKeys: Key[] = [];
 
-	/** @todo удалить */
-	_deps: Deps;
-	_registeredDeps: RegisteredDeps;
-	_allDeps: AllDeps;
+	private constructor(
+		private getValue: GetValue<Type, Deps>,
+		private regDeps: RegisteredDeps
+	) {}
 
-	constructor(protected getValue: GetValue<Type, Deps>) {}
+	static [constructorSymbol] = <
+		Type,
+		Deps extends Dependencies,
+		RegisteredDeps extends Record<Key, Container<any, any, any>>
+	>(
+		getValue: GetValue<Type, Deps>,
+		regDeps: RegisteredDeps
+	) => {
+		return new Container<Type, Deps, RegisteredDeps>(getValue, regDeps);
+	};
+
+	singlton(
+		...tokens: Array<keyof AllDeps>
+	): Container<Type, Deps, RegisteredDeps> {
+		return null as any; // new Container()
+	}
 
 	readonly resolve: Resolve<
 		Type,
 		AllDeps,
 		RequiredDeps<Container<Type, Deps, RegisteredDeps>, never>
-	> = () => {
-		return null as any;
-	};
+	> = (deps: Partial<Deps> = {}) =>
+		this[createValueSymbol]((k) => (k in deps ? { value: deps[k] } : null));
+
+	private [createValueSymbol](
+		parentCreateValue: (k: Key) => { value: any } | null
+	): Type {
+		const createValue = (kk: Key) => {
+			const parentValue = parentCreateValue(kk);
+			if (parentValue) {
+				return parentValue;
+			}
+
+			const child = this.regDeps[kk];
+			if (child) {
+				return { value: child[createValueSymbol](createValue) };
+			}
+
+			return null;
+		};
+		return this.getValue(createValue as any);
+	}
 
 	register<NewDeps extends Partial<DepsToContainerData<AllDeps>>>(
 		deps: NewDeps
@@ -63,9 +99,34 @@ export class Container<
 			}
 		>
 	>;
-	register() {
-		return null as any;
+	register(key: Key | object, container?: Container<any, any, any> | any) {
+		return new Container(this.getValue, {
+			...this.regDeps,
+			...(typeof key === 'object'
+				? Object.fromEntries(
+						getAllKeys(key).map((depKey) => [
+							depKey,
+							(key as any)[depKey] instanceof Container
+								? (key as any)[depKey]
+								: constant((key as any)[depKey]),
+						])
+				  )
+				: {
+						[key]:
+							container instanceof Container
+								? container
+								: constant(container),
+				  }),
+		}) as any;
 	}
+}
+
+export function getAllKeys(obj: any): Key[] {
+	const keys: Key[] = Object.keys(obj);
+	if (typeof Object.getOwnPropertySymbols === 'function') {
+		return keys.concat(Object.getOwnPropertySymbols(obj));
+	}
+	return keys;
 }
 
 export type MapConstantsToContainers<T extends Record<Key, any>> = {
@@ -79,7 +140,7 @@ export type DepsToContainerData<Deps> = {
 };
 
 export function constant<T>(value: T) {
-	return new Container<T, {}, {}>(() => value);
+	return Container[constructorSymbol]<T, {}, {}>(() => value, {});
 }
 
 declare const NeverGuardSymbol: unique symbol;
@@ -92,7 +153,6 @@ export type Resolve<
 	? {
 			(): MainType;
 			(deps: Partial<Deps> & object): MainType;
-			<K extends keyof Deps>(key: K): Deps[K];
 	  }
 	: (
 			deps: HumanReadableType<
@@ -114,16 +174,14 @@ export type RequiredDeps<
 export type ChidrenRequiredDepKeys<
 	RegisteredDeps extends Record<Key, Container<any, any, any>>,
 	DepKeys extends Key
-> = [keyof RegisteredDeps] extends [never]
-	? never
-	: {
-			[K in keyof RegisteredDeps]: K extends DepKeys
-				? never
-				: RequiredDeps<
-						RegisteredDeps[K],
-						Extract<keyof RegisteredDeps, Key> | DepKeys
-				  >;
-	  }[keyof RegisteredDeps];
+> = {
+	[K in keyof RegisteredDeps]: K extends DepKeys
+		? never
+		: RequiredDeps<
+				RegisteredDeps[K],
+				Extract<keyof RegisteredDeps, Key> | DepKeys
+		  >;
+}[keyof RegisteredDeps];
 
 export type Key = string | symbol;
 export type Dependencies = Record<Key, any>;
@@ -155,7 +213,8 @@ export type UnionToIntersection<U> = (
 export type HumanReadableType<T> = T extends infer U
 	? { [K in keyof U]: U[K] }
 	: never;
+// export type HumanReadableType<T> = T;
 
 export type GetValue<Type, Deps extends Dependencies> = (
-	resolve: <K extends keyof Deps>(k: K) => Deps[K]
+	resolve: <K extends keyof Deps>(k: K) => { value: Deps[K] } | null
 ) => Type;

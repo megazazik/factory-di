@@ -64,6 +64,11 @@ tape('ofFactory. Nested', (t) => {
 		n2: true,
 	});
 
+	t.deepEqual(container.resolve('nested1'), { nestedValue: 'nStrValue' });
+	t.equal(container.resolve('nStr'), 'nStrValue');
+	t.equal(container.resolve('dep1'), 154);
+	t.equal(container.resolve('n2'), true);
+
 	t.end();
 });
 

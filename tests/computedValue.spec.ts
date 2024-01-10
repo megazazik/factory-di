@@ -72,6 +72,11 @@ tape('ofComputedValue. Nested', (t) => {
 		n2: true,
 	});
 
+	t.deepEqual(container.resolve('nested1'), { nestedValue: 'nStrValue' });
+	t.equal(container.resolve('nStr'), 'nStrValue');
+	t.equal(container.resolve('dep1'), 154);
+	t.equal(container.resolve('n2'), true);
+
 	t.end();
 });
 
@@ -146,6 +151,11 @@ tape('ofComputedValue. Nested. Object', (t) => {
 		n2: true,
 	});
 
+	t.deepEqual(container.resolve('nested1'), { nestedValue: 'nStrValue' });
+	t.equal(container.resolve('nStr'), 'nStrValue');
+	t.equal(container.resolve('dep1'), 154);
+	t.equal(container.resolve('n2'), true);
+
 	t.end();
 });
 
@@ -188,6 +198,11 @@ tape('ofComputedValue. Nested. Object. No tokens', (t) => {
 		n1: { nestedValue: 'nStrValue' },
 		n2: true,
 	});
+
+	t.deepEqual(container.resolve('nested1'), { nestedValue: 'nStrValue' });
+	t.equal(container.resolve('pnStr'), 'nStrValue');
+	t.equal(container.resolve('pdep1'), 154);
+	t.equal(container.resolve('n2'), true);
 
 	t.end();
 });
