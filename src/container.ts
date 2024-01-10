@@ -4,6 +4,11 @@ declare const depsKey: unique symbol;
 declare const allDepsKey: unique symbol;
 declare const registeredDepsKey: unique symbol;
 
+export type GetValue<Type, Deps extends Dependencies> = (
+	resolve: <K extends keyof Deps>(k: K) => { value: Deps[K] } | null,
+	singltonTokens: Set<Key>
+) => Type;
+
 export class Container<
 	Type,
 	Deps extends Dependencies,
@@ -16,28 +21,33 @@ export class Container<
 	[depsKey]: Deps;
 	[registeredDepsKey]: RegisteredDeps;
 	[allDepsKey]: AllDeps;
-	private _singltonKeys: Key[] = [];
 
 	private constructor(
 		private getValue: GetValue<Type, Deps>,
-		private regDeps: RegisteredDeps
+		private regDeps: RegisteredDeps,
+		private singltonTokens: Set<Key>
 	) {}
 
-	static [constructorSymbol] = <
+	static [constructorSymbol]<
 		Type,
 		Deps extends Dependencies,
 		RegisteredDeps extends Record<Key, Container<any, any, any>>
-	>(
-		getValue: GetValue<Type, Deps>,
-		regDeps: RegisteredDeps
-	) => {
-		return new Container<Type, Deps, RegisteredDeps>(getValue, regDeps);
-	};
+	>(getValue: GetValue<Type, Deps>, regDeps: RegisteredDeps) {
+		return new Container<Type, Deps, RegisteredDeps>(
+			getValue,
+			regDeps,
+			new Set()
+		);
+	}
 
 	singlton(
 		...tokens: Array<keyof AllDeps>
 	): Container<Type, Deps, RegisteredDeps> {
-		return null as any; // new Container()
+		return new Container(
+			this.getValue,
+			this.regDeps,
+			new Set([...this.singltonTokens, ...(tokens as Key[])])
+		);
 	}
 
 	readonly resolve: Resolve<
@@ -45,25 +55,49 @@ export class Container<
 		AllDeps,
 		RequiredDeps<Container<Type, Deps, RegisteredDeps>, never>
 	> = (deps: Partial<Deps> = {}) =>
-		this[createValueSymbol]((k) => (k in deps ? { value: deps[k] } : null));
+		this[createValueSymbol](
+			(k) => (k in deps ? { value: deps[k] } : null),
+			new Set()
+		);
 
 	private [createValueSymbol](
-		parentCreateValue: (k: Key) => { value: any } | null
+		parentCreateValue: (k: Key) => { value: any } | null,
+		parentSingltonTokens: Set<Key>
 	): Type {
+		const instances = new Map<Key, any>();
+		const singltonTokens = new Set([
+			...this.singltonTokens,
+			...parentSingltonTokens,
+		]);
+
 		const createValue = (kk: Key) => {
+			if (instances.has(kk)) {
+				return { value: instances.get(kk) };
+			}
+
 			const parentValue = parentCreateValue(kk);
 			if (parentValue) {
+				if (singltonTokens.has(kk)) {
+					instances.set(kk, parentValue.value);
+				}
 				return parentValue;
 			}
 
 			const child = this.regDeps[kk];
 			if (child) {
-				return { value: child[createValueSymbol](createValue) };
+				const childValue = child[createValueSymbol](
+					createValue,
+					singltonTokens
+				);
+				if (singltonTokens.has(kk)) {
+					instances.set(kk, childValue);
+				}
+				return { value: childValue };
 			}
 
 			return null;
 		};
-		return this.getValue(createValue as any);
+		return this.getValue(createValue as any, singltonTokens);
 	}
 
 	register<NewDeps extends Partial<DepsToContainerData<AllDeps>>>(
@@ -100,24 +134,28 @@ export class Container<
 		>
 	>;
 	register(key: Key | object, container?: Container<any, any, any> | any) {
-		return new Container(this.getValue, {
-			...this.regDeps,
-			...(typeof key === 'object'
-				? Object.fromEntries(
-						getAllKeys(key).map((depKey) => [
-							depKey,
-							(key as any)[depKey] instanceof Container
-								? (key as any)[depKey]
-								: constant((key as any)[depKey]),
-						])
-				  )
-				: {
-						[key]:
-							container instanceof Container
-								? container
-								: constant(container),
-				  }),
-		}) as any;
+		return new Container(
+			this.getValue,
+			{
+				...this.regDeps,
+				...(typeof key === 'object'
+					? Object.fromEntries(
+							getAllKeys(key).map((depKey) => [
+								depKey,
+								(key as any)[depKey] instanceof Container
+									? (key as any)[depKey]
+									: constant((key as any)[depKey]),
+							])
+					  )
+					: {
+							[key]:
+								container instanceof Container
+									? container
+									: constant(container),
+					  }),
+			},
+			this.singltonTokens
+		) as any;
 	}
 }
 
@@ -214,7 +252,3 @@ export type HumanReadableType<T> = T extends infer U
 	? { [K in keyof U]: U[K] }
 	: never;
 // export type HumanReadableType<T> = T;
-
-export type GetValue<Type, Deps extends Dependencies> = (
-	resolve: <K extends keyof Deps>(k: K) => { value: Deps[K] } | null
-) => Type;

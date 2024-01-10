@@ -1,10 +1,5 @@
 import { constructorSymbol, createValueSymbol } from './innerMethods';
-import {
-	Dependencies,
-	Key,
-	Container /* , createContainer */,
-	HumanReadableType,
-} from './container';
+import { Dependencies, Key, Container, HumanReadableType } from './container';
 
 export type FactoryResolve<Params extends Record<Key, any>> = <
 	K extends keyof Params
@@ -89,7 +84,7 @@ export const factory: Factory = (
 		);
 		// when params is object, not array
 		return Container[constructorSymbol](
-			(parentResolve) => (args: Record<Key, Key>) => {
+			(parentResolve, singltonTokens) => (args: Record<Key, Key>) => {
 				const resolve: typeof parentResolve = (k) => {
 					if (k in argsMap) {
 						return { value: args[argsMap[k]] };
@@ -97,7 +92,7 @@ export const factory: Factory = (
 
 					return parentResolve(k);
 				};
-				return factory[createValueSymbol](resolve);
+				return factory[createValueSymbol](resolve, singltonTokens);
 			},
 			{}
 		) as any;
@@ -105,7 +100,7 @@ export const factory: Factory = (
 
 	const argsMap = Object.fromEntries(params.map((v, i) => [v, i]));
 	return Container[constructorSymbol](
-		(parentResolve) =>
+		(parentResolve, singltonTokens) =>
 			(...args: Key[]) => {
 				const resolve: typeof parentResolve = (k) => {
 					if (k in argsMap) {
@@ -114,7 +109,7 @@ export const factory: Factory = (
 
 					return parentResolve(k);
 				};
-				return factory[createValueSymbol](resolve);
+				return factory[createValueSymbol](resolve, singltonTokens);
 			},
 		{}
 	) as any;
