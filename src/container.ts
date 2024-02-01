@@ -60,11 +60,12 @@ export class Container<
 			new Set()
 		);
 
-	private [createValueSymbol](
+	[createValueSymbol](
 		parentCreateValue: (k: Key) => { value: any } | null,
 		parentSingltonTokens: Set<Key>
 	): Type {
 		const instances = new Map<Key, any>();
+
 		const singltonTokens = new Set([
 			...this.singltonTokens,
 			...parentSingltonTokens,
@@ -89,6 +90,7 @@ export class Container<
 					createValue,
 					singltonTokens
 				);
+
 				if (singltonTokens.has(kk)) {
 					instances.set(kk, childValue);
 				}
