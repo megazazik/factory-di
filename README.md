@@ -64,26 +64,23 @@ import { singleton, constant } from 'factory-di';
 import fooContainer from './foo';
 import databaseContainer from './database';
 
-// you can not create Foo via fooContainer here because its dependency 'database' is not registered yet
-// this line would cause TS error
-// fooContainer.resolve();
+// you can not create Foo via fooContainer before its dependency 'database' is registered
+// fooContainer.resolve(); // this line would cause TS error
 
-// creates a new container (each call of register function create a new independent containers)
+// registers all required dependencies
 const containerWithDatabase = fooContainer
-	// registers database as a singleton
-	.register('database', singleton(databaseContainer))
-	// you must register also all dependencies of 'database'
-	// or a call of resolve would cause TS error too
-	// you can register static values via 'constant' function
-	.register('dbHost', constant('<your_host>'))
-	.register('dbLogin', constant('<your_login>'))
-	.register('dbPassword', constant('<your_password>'));
+	// registers database
+	.register('database', databaseContainer)
+	// you should register also all dependencies of 'database'
+	// or a call of "resolve" would cause TS error too
+	.register({
+		dbHost: '<your_host>',
+		dbLogin: '<your_login>',
+		dbPassword: '<your_password>',
+	});
 
 // now you can create Foo
 const fooInstance = containerWithDatabase.resolve();
-
-// or you can create Database
-const database = containerWithDatabase.resolve('database');
 ```
 
 ## Containers
@@ -111,7 +108,9 @@ const container = Class(Bar, 'Foo');
 
 Each dependency has a token. You can use a string or a symbol as a dependency token.
 
-Before you can call the `resolve` method you must registed all declared dependencies. You can do it via the `register` method. It receives a dependency token and a dependency container.
+Before you create an instance you should register all declared dependencies. Or you can pass required dependencies to the `resolve` methos.
+
+You can register dependencies via the `register` method. It receives a dependency token and a dependency container.
 
 ```typescript
 class Bar {
@@ -160,15 +159,7 @@ const instance = Class(SomeClass, 'dep1', 'dep2').resolve({
 });
 ```
 
-Also you can create any declared dependency. To do that you need to pass a token of the dependency.
-
-```typescript
-const fooInstance = container.resolve('Foo');
-```
-
-Each call of the `register` method returns a new inpedendent container.
-
-Containers can have many levels of nesting. You can use the `resolve` function to create values from any level of nesting.
+Each call of the `register` method returns a new inpedendent container. Containers can have many levels of nesting.
 
 Dependencies can be registered via a root container or via any nested container.
 
@@ -223,7 +214,7 @@ root.foo1.str; // 'strValue1'
 root.foo2.str; // 'strValue2'
 ```
 
-If some dependency is registered via a parent container and via a any child container then the parent dependency value is used for parent and children containers.
+If some dependency is registered via a parent container and via any child container then the parent dependency value is used for parent and children containers.
 
 ```typescript
 class Foo1 {
@@ -243,6 +234,8 @@ const root = Class(Root, 'foo1', 'foo2')
 
 root.foo1.str; // 'strValueRoot'
 ```
+
+If a dependency is registered in some container then this dependency is applied only for this container and its children containers. The dependency won't be used for parents of the container.
 
 ## Class
 
@@ -313,8 +306,8 @@ const myClassContainer = Class(MyClass, {
 });
 
 const myClassInstance = myClassContainer
-	.register('param1Token', constant('strValue'))
-	.register('param2Token', constant(123))
+	.register('param1Token', 'strValue')
+	.register('param2Token', 123)
 	.resolve();
 
 myClassInstance.params.strParam; // 'strValue'
@@ -349,6 +342,9 @@ const container1 = Class(MyClass, {
  *  - numParam
  */
 const container2 = Class(MyClass, {
+	/**
+	 * inside Class function you should always use constant function to register static values (not child containers)
+	 */
 	strParam: constant('strValue'),
 	numParam: constant(123),
 });
@@ -385,8 +381,8 @@ const myContainer = computedValue(
 );
 
 const myValue = myContainer
-	.register('param1Token', constant('strValue'))
-	.register('param2Token', constant(123))
+	.register('param1Token', 'strValue')
+	.register('param2Token', 123)
 	.resolve();
 ```
 
@@ -461,6 +457,9 @@ const container1 = computedValue(
 const container2 = computedValue(
 	(params: MyFactoryMethodParams) => new MyClass(params),
 	{
+		/**
+		 * inside computedValue function you should always use constant function to register static values (not child containers)
+		 */
 		strParam: constant('strValue'),
 		numParam: constant(123),
 	}
@@ -469,7 +468,7 @@ const container2 = computedValue(
 
 ## constant
 
-The `constant` function can be used to create a container for some immutable value. The common case - to pass a constant container as a dependency of some other container.
+The `constant` function can be used to create a container for some immutable value. The common case - to pass a constant container as a dependency directly to `Class` or `computedValue` method.
 
 ```typescript
 function constant(value: any): Container;
@@ -480,9 +479,9 @@ Example.
 ```typescript
 const myConstantContainer = constant(99);
 
-computedValue((num: number) => new MyClass(num), 'numValue')
-	.register('numValue', myConstantContainer)
-	.resolve();
+computedValue((params: { num: number }) => new MyClass(params), {
+	num: constant(99),
+}).resolve();
 ```
 
 ## factory
@@ -598,13 +597,11 @@ const carContainer = Class(Car, 'carManufacturer', 'carModel');
 // and requires the same two dependencies - 'carManufacturer' and 'carModel'
 const carFactoryContainer = factory(carContainer);
 
-// so before using carFactory you should register these two deps
-const toyotaCamryFactory = carFactoryContainer
-	.register({
-		carManufacturer: 'toyota',
-		carModel: 'camry',
-	})
-	.resolve();
+// so before using carFactory you should pass these two deps
+const toyotaCamryFactory = carFactoryContainer.resolve({
+	carManufacturer: 'toyota',
+	carModel: 'camry',
+});
 
 // now you can use toyotaCamryFactory to create cars
 toyotaCamryFactory(); // Car { manufacturer: 'toyota', model: 'camry'}
@@ -619,12 +616,10 @@ toyotaCamryFactory(); // Car { manufacturer: 'toyota', model: 'camry'}
 // and requires the only dependency - 'carManufacturer'.
 const carFactoryContainer = factory(carContainer, 'carModel');
 
-// so before using carFactory you should register carManufacturer
-const toyotaFactory = carFactoryContainer
-	.register({
-		carManufacturer: 'toyota',
-	})
-	.resolve();
+// so before using carFactory you should pass carManufacturer
+const toyotaFactory = carFactoryContainer.resolve({
+	carManufacturer: 'toyota',
+});
 
 toyotaFactory('camry'); // Car { manufacturer: 'toyota', model: 'camry'}
 toyotaFactory('corolla'); // Car { manufacturer: 'toyota', model: 'corolla'}
@@ -677,40 +672,51 @@ carFactory({ manufacturer: 'ford', model: 'mondeo' }); // Car { manufacturer: 'f
 
 ## singleton
 
-If you need some dependency to be singleton you can wrap any dependency container with the `singleton` function.
+If some containers need the same dependency then by default they receive different instances of this dependency.
 
 ```typescript
-import { Class, singleton } from 'factory-di';
+class Logger {}
 
-class Foo {}
-
-class Bar {
-	constructor(public foo: Foo) {}
+class Module1 {
+	constructor(public logger: Logger) {}
 }
 
-const container = Class(Bar, 'Foo').register(
-	Bar,
-	// wrap Foo container with singleton
-	singleton(Class(Foo))
-);
+class Module2 {
+	constructor(public logger: Logger) {}
+}
 
-// now each Bar instance reveices the same Foo instance
-const barInstance1 = container.resolve();
-const barInstance2 = container.resolve();
+class App {
+	constructor(public modules: { module1: Module1; module2: Module2 }) {}
+}
+
+const app = Class(App, {
+	module1: Class(Module1, 'logger'),
+	module2: Class(Module2, 'logger'),
+})
+	.register('logger', Class(Logger))
+	.resolve();
+
+a.modules.module1.logger === a.modules.module2.logger; // false
 ```
 
-Each call of `singleton` creates an independent instance container. If you register some dependency via two nested containers with two calls of `singleton`. Then these two nested containers will receive 2 different instances.
-
-If you need nested containers receive the same singleton instance you should once wrap some container with `singleton` and pass the wrapped container as a dependency to other containers. Or you should register a singleton once via a root container.
-
-### Clear singletons
-
-To clear singleton instances you can get a Singleton Manager instance. You can get it via `SingletonManagerKey`.
+If you need some dependency to be a singleton you can call the `singleton` method and pass a key of any dependency as an argument.
 
 ```typescript
-import { SingletonManagerKey } from 'factory-di';
+const app = Class(App, {
+	module1: Class(Module1, 'logger'),
+	module2: Class(Module2, 'logger'),
+})
+	.register('logger', Class(Logger))
+	.singleton('logger')
+	.resolve();
 
-const singletonManager = rootContainer.resolve(SingletonManagerKey);
+a.modules.module1.logger === a.modules.module2.logger; // true
 ```
 
-A Singleton Manager instance has the only method 'clear' which delete all singleton instances created inside this container and inside all nested containers.
+There are some factors of the `singleton` method behavior.
+
+-   if you make a dependency to be a singleton it affects only the current container and its children
+-       two different containers registered with the same token create independent instances even if you mark this token as singleton
+-   if you register some dependency container twice it is considered as two independent containers and they create independent instances even if you mark them as singleton
+-   each call of the `resolve` method has its own set of singletons. During each call all singletons receive new instances
+-   if you use the `factory` function to create several instances then each call of the factory reinitializes singletons of all children containers of the factory. If you need some dependency to be a singleton inside all instances created by the factory you should register this dependency and mark it as singleton via the container of the factory or via some parent container
