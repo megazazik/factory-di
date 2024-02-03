@@ -1,3 +1,18 @@
+# [3.0.0](https://github.com/megazazik/factory-di/compare/v2.0.0...v3.0.0) (2024-02-03)
+
+
+### Features
+
+* change resolving dependencies method, new singleton behavior ([e8a9a85](https://github.com/megazazik/factory-di/commit/e8a9a85394fc52c771acfeac25e7500ebffd47cc))
+
+
+### BREAKING CHANGES
+
+* Removed the old singleton function (use the new singleton method instead). Now you
+should register dependencies only in the container itself or in its parent container
+
+
+
 # [2.0.0](https://github.com/megazazik/factory-di/compare/v1.0.0...v2.0.0) (2023-08-06)
 
 
