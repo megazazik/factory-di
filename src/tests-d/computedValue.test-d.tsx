@@ -1,11 +1,5 @@
 import { expectError, expectType } from 'tsd';
-import {
-	Container,
-	constant,
-	computedValue,
-	ResolveWithRequiredDeps,
-	ContainerData,
-} from '..';
+import { Container, computedValue, constant } from '..';
 
 export function ofComputedValueWithoutDeps() {
 	expectType<Container<string, {}, {}>>(computedValue(() => 'string'));
@@ -20,20 +14,11 @@ export function ofComputedValueOneDep() {
 	);
 }
 
-export function ofComputedValueOneDepNoRegistered() {
-	expectType<
-		ResolveWithRequiredDeps<
-			{ dep1: number } & { dep1?: number },
-			{ value: number }
-		>
-	>(computedValue((p: number) => ({ value: p }), 'dep1').resolve);
-}
-
 export function ofComputedValueTwoDep() {
 	expectType<
 		Container<
 			{ value: number; p2: string },
-			{ dep1: number } & { dep2: string },
+			{ dep1: number; dep2: string },
 			{}
 		>
 	>(
@@ -44,15 +29,32 @@ export function ofComputedValueTwoDep() {
 		)
 	);
 
-	expectType<{ value: number; p2: string }>(
+	expectType<
+		Container<number, { dep1: number; dep2: string | undefined }, {}>
+	>(computedValue((p: number, p2?: string) => 123, 'dep1', 'dep2'));
+
+	expectType<
+		Container<
+			{ value: number; p2: string | undefined },
+			{ dep1: number; dep2: string | undefined },
+			{}
+		>
+	>(
 		computedValue(
-			(p: number, p2: string) => ({ value: p, p2 }),
+			(p: number, p2?: string) => ({ value: p, p2 }),
 			'dep1',
 			'dep2'
 		)
-			.register('dep1', constant(432))
-			.register('dep2', constant('dfg'))
-			.resolve()
+	);
+}
+
+export function onComputedValueWithEmptyInterface() {
+	expectType<Container<{ value: boolean }, { p0: {} }, {}>>(
+		computedValue((p: {}) => ({ value: !!p }), 'p0')
+	);
+
+	expectType<Container<boolean, { p0: { p?: boolean } }, {}>>(
+		computedValue((p: { p?: boolean }) => true, 'p0')
 	);
 }
 
@@ -62,23 +64,14 @@ export function ofComputedValueObjectOneDep() {
 	);
 }
 
-export function ofComputedValueObjectOneDepNoRegistered() {
-	expectType<
-		ResolveWithRequiredDeps<
-			{ dep1: number } & { dep1?: number },
-			{ value: number }
-		>
-	>(
-		computedValue(({ p }: { p: number }) => ({ value: p }), { p: 'dep1' })
-			.resolve
-	);
-}
-
 export function ofComputedValueObjectTwoDep() {
 	expectType<
 		Container<
-			{ value: number; p2: string },
-			{ dep1: number } & { dep2: string },
+			{
+				value: number;
+				p2: string;
+			},
+			{ dep1: number; dep2: string },
 			{}
 		>
 	>(
@@ -91,23 +84,13 @@ export function ofComputedValueObjectTwoDep() {
 		)
 	);
 
-	expectType<{ value: number; p2: string }>(
-		computedValue(
-			({ p, p2 }: { p: number; p2: string }) => ({ value: p, p2 }),
-			{
-				p: 'dep1',
-				p2: 'dep2',
-			}
-		)
-			.register('dep1', constant(432))
-			.register('dep2', constant('dfg'))
-			.resolve()
-	);
-}
-
-export function onComputedValueWithEmptyInterface() {
-	expectType<Container<{ value: boolean }, { p0: {} }, {}>>(
-		computedValue((p: {}) => ({ value: !!p }), 'p0')
+	expectType<
+		Container<true, { dep1: number; dep2?: string | undefined }, {}>
+	>(
+		computedValue((_: { p: number; p2?: string }) => true, {
+			p: 'dep1',
+			p2: 'dep2',
+		})
 	);
 }
 
@@ -117,7 +100,7 @@ export function ofComputedValueObjectOneDepNoToken() {
 			{ value: number },
 			{ dep1: number },
 			{
-				dep1: Container<number, {}, {}>;
+				readonly dep1: Container<number, {}, {}>;
 			}
 		>
 	>(
@@ -127,65 +110,19 @@ export function ofComputedValueObjectOneDepNoToken() {
 	);
 }
 
-export function ofComputedValueObjectFullEmbeddedDepNoToken() {
-	expectType<
-		Container<
-			{ value: number },
-			{ dep1: number },
-			{
-				dep1: Container<
-					number,
-					{ dep2: number },
-					{ dep2: ContainerData<123, {}, {}> }
-				>;
-			}
-		>
-	>(
-		computedValue(({ dep1 }: { dep1: number }) => ({ value: dep1 }), {
-			dep1: computedValue((dep2: number) => dep2, 'dep2').register(
-				'dep2',
-				123
-			),
-		})
-	);
-
-	expectType<{ value: number }>(
-		computedValue(({ dep1 }: { dep1: number }) => ({ value: dep1 }), {
-			dep1: computedValue((dep2: number) => dep2, 'dep2').register(
-				'dep2',
-				123
-			),
-		}).resolve()
-	);
-}
-
 export function ofComputedValueObjectNoFullEmbeddedDepNoToken() {
 	expectType<
 		Container<
 			{ value: number },
 			{ dep1: number },
 			{
-				dep1: Container<number, { dep2: number }, {}>;
+				readonly dep1: Container<number, { dep2: number }, {}>;
 			}
 		>
 	>(
 		computedValue(({ dep1 }: { dep1: number }) => ({ value: dep1 }), {
 			dep1: computedValue((dep2: number) => dep2, 'dep2'),
 		})
-	);
-
-	expectType<{ value: number }>(
-		computedValue(({ dep1 }: { dep1: number }) => ({ value: dep1 }), {
-			dep1: computedValue((dep2: number) => dep2, 'dep2'),
-		}).resolve({
-			dep2: 123,
-		})
-	);
-
-	expectError(
-		computedValue(({ dep1 }: { dep1: number }) => ({ value: dep1 }), {
-			dep1: computedValue((dep2: number) => dep2, 'dep2'),
-		}).resolve()
 	);
 }
 
@@ -193,10 +130,10 @@ export function ofComputedValueObjectTwoDepNoToken() {
 	expectType<
 		Container<
 			{ value: number; p2: string },
-			{ dep1: number } & { dep2: string },
+			{ dep1: number; dep2: string },
 			{
-				dep1: Container<number, {}, {}>;
-				dep2: Container<string, {}, {}>;
+				readonly dep1: Container<number, {}, {}>;
+				readonly dep2: Container<string, {}, {}>;
 			}
 		>
 	>(
@@ -211,28 +148,23 @@ export function ofComputedValueObjectTwoDepNoToken() {
 			}
 		)
 	);
-
-	expectType<{ value: number; p2: string }>(
-		computedValue(
-			({ dep1, dep2 }: { dep1: number; dep2: string }) => ({
-				value: dep1,
-				p2: dep2,
-			}),
-			{
-				dep1: constant(321),
-				dep2: constant('sdfsdf'),
-			}
-		).resolve()
-	);
 }
 
 export function ofComputedValueWrongParams() {
+	// expectError(
+	// 	computedValue(
+	// 		({ p, p2 }: { p: number; p2: string }) => ({ value: p, p2 }),
+	// 		{
+	// 			p: 'dep1',
+	// 			p2: 'dep2',
+	// 			p3: 'wrong',
+	// 		}
+	// 	)
+	// );
+
 	expectError(
 		computedValue(
-			({ dep1, dep2 }: { dep1: number; dep2: string }) => ({
-				value: dep1,
-				p2: dep2,
-			}),
+			({ dep1, dep2 }: { dep1: number; dep2: string }) => true,
 			{
 				dep1: true,
 				dep2: constant('sdfsdf'),
@@ -242,14 +174,41 @@ export function ofComputedValueWrongParams() {
 
 	expectError(
 		computedValue(
-			({ dep1, dep2 }: { dep1: number; dep2: string }) => ({
-				value: dep1,
-				p2: dep2,
-			}),
+			({ dep1, dep2 }: { dep1: number; dep2: string }) => true,
 			{
 				dep1: constant('321'),
 				dep2: constant('sdfsdf'),
 			}
 		)
+	);
+
+	expectError(
+		computedValue(
+			({ dep1, dep2 }: { dep1: number; dep2: string }) => true,
+			{
+				dep1: constant(321),
+			}
+		)
+	);
+
+	expectError(
+		computedValue((dep1: number, dep2: string) => true, {
+			dep1: constant(321),
+		})
+	);
+
+	expectError(computedValue((dep1: number, dep2: string) => true, 'dep1'));
+
+	expectError(
+		computedValue(
+			(dep1: number, dep2: string) => true,
+			'dep1',
+			'dep2',
+			'dep3'
+		)
+	);
+
+	expectError(
+		computedValue((dep1: number, dep2: string) => true, 'dep1', 123)
 	);
 }

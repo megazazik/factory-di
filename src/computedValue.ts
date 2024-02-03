@@ -1,52 +1,54 @@
-import { ContainerData, Key } from './containerData';
+import { constructorSymbol } from './innerMethods';
 import {
 	Container,
-	MapTuple,
-	UnknownGuard,
-	createContainer,
-	ObjectValuesIntersection,
-	CombineTuplesToMap,
+	DepsFromParamsList,
+	HumanReadableType,
+	Key,
+	KeysTuple,
+	NumberKeysOnly,
 	getAllKeys,
-	ContainerDataValueKeys,
-} from './createContainer';
+} from './container';
 
 export type OfComputedValue = {
 	<T>(getValue: () => T): Container<T, {}, {}>;
-	<Params extends [...any[]], T, Keys extends MapTuple<Params, Key>>(
+
+	<Params extends object, T, const KeysMap extends DependenciesMap<Params>>(
+		c: (params: Params) => T,
+		keys: KeysMap
+	): KeysMap extends Key // на случай, если передали токен, который соответствует типу первого параметра
+		? Container<T, { [KK in KeysMap]: Params }, {}>
+		: Container<
+				T,
+				{
+					[K in keyof Params as KeysMap[K] extends Key
+						? KeysMap[K]
+						: K]: Params[K];
+				},
+				{
+					[K in keyof KeysMap as KeysMap[K] extends Container<
+						any,
+						any,
+						any
+					>
+						? K
+						: never]: KeysMap[K] extends Container<any, any, any>
+						? KeysMap[K]
+						: never;
+				}
+		  >;
+
+	<Params extends [...any[]], T, Keys extends KeysTuple<Params>>(
 		c: (...args: Params) => T,
 		...keys: Keys
-	): Container<T, UnknownGuard<CombineTuplesToMap<Keys, Params>>, {}>;
-	<
-		Params extends object,
-		T,
-		Keys extends Key,
-		KeysMap extends ComputedValueDependenciesMap<Params, Keys>
-	>(
-		c: (params: Params) => T,
-		keys: KeysMap & object
 	): Container<
 		T,
-		UnknownGuard<
-			ObjectValuesIntersection<{
-				[K in keyof Params]: KeysMap[K] extends Key
-					? { [KK in KeysMap[K]]: Params[K] }
-					: { [KK in K]: Params[K] };
-			}>
-		>,
-		{
-			[K in ContainerDataValueKeys<KeysMap>]: KeysMap[K] extends ContainerData<
-				any,
-				any,
-				any
-			>
-				? KeysMap[K]
-				: never;
-		}
+		HumanReadableType<DepsFromParamsList<NumberKeysOnly<Keys>, Params>>,
+		{}
 	>;
 };
 
-export type ComputedValueDependenciesMap<Params extends object, Keys> = {
-	[K in keyof Params]: Keys | ContainerData<Params[K], any, any>;
+type DependenciesMap<Params extends object> = {
+	[K in keyof Params]: Key | Container<Params[K], any, any>;
 };
 
 export const computedValue: OfComputedValue = <T>(
@@ -61,24 +63,25 @@ export const computedValue: OfComputedValue = <T>(
 			}
 		});
 
-		return createContainer({
-			registeredDeps,
-			getValue: (resolve: any) =>
+		return Container[constructorSymbol](
+			(resolve: any) =>
 				getValue(
 					getAllKeys(argNames[0]).reduce((prev, key) => {
 						const value = (argNames[0] as any)[key];
 						return Object.assign(prev, {
-							[key]: resolve(
-								typeof value === 'object' ? key : value
-							),
+							[key]:
+								resolve(typeof value === 'object' ? key : value)
+									?.value ?? undefined,
 						});
 					}, {})
 				),
-		}) as Container<T, {}, {}>;
+			registeredDeps
+		) as Container<T, {}, {}>;
 	}
 
-	return createContainer({
-		registeredDeps: {},
-		getValue: (resolve) => getValue(...argNames.map(resolve)),
-	}) as Container<T, {}, {}>;
+	return Container[constructorSymbol](
+		(resolve: any) =>
+			getValue(...argNames.map((k) => resolve(k)?.value ?? undefined)),
+		{}
+	) as Container<T, {}, {}>;
 };

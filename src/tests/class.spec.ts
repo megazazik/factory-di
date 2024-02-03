@@ -78,16 +78,6 @@ tape('ofClass. Nested. Object', (t) => {
 	t.ok(parent.params.pnested2 instanceof Child2);
 	t.deepEqual(parent.params.pnested2.params, { pn2: true });
 
-	t.ok(container.resolve('nested1') instanceof Child1);
-	t.deepEqual(container.resolve('nested1').params, { pnStr: 'nStrValue' });
-
-	t.ok(container.resolve('nested2') instanceof Child2);
-	t.deepEqual(container.resolve('nested2').params, { pn2: true });
-
-	t.equal(container.resolve('nStr'), 'nStrValue');
-	t.equal(container.resolve('dep1'), 154);
-	t.equal(container.resolve('n2'), true);
-
 	t.end();
 });
 
@@ -129,16 +119,6 @@ tape('ofClass. Nested. Object. No tokens', (t) => {
 
 	t.ok(parent.params.pnested2 instanceof Child2);
 	t.deepEqual(parent.params.pnested2.params, { pn2: true });
-
-	t.ok(container.resolve('nested1') instanceof Child1);
-	t.deepEqual(container.resolve('nested1').params, { pnStr: 'nStrValue' });
-
-	t.ok(container.resolve('pnested2') instanceof Child2);
-	t.deepEqual(container.resolve('pnested2').params, { pn2: true });
-
-	t.equal(container.resolve('pnStr1'), 'nStrValue');
-	t.equal(container.resolve('pdep1'), 154);
-	t.equal(container.resolve('pn2'), true);
 
 	t.end();
 });

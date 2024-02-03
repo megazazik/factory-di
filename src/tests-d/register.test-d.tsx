@@ -1,264 +1,183 @@
 import { expectType, expectError } from 'tsd';
-import { Class, constant, ResolveWithRequiredDeps } from '..';
+import { Container } from '..';
 
-class C2 {
-	constructor(public p1: string, public p2: number) {}
-}
+declare const cBool: Container<boolean, {}, {}>;
+declare const cNum: Container<number, { b: boolean }, {}>;
+declare const cStr: Container<string, { n: number }, {}>;
 
-class C3 {
-	constructor(public c2: C2, public p2: number) {}
-}
+export function allDeps() {
+	expectType<Container<boolean, {}, {}, {}>>(cBool);
 
-export function ofClassChildrenDeps() {
-	const c2Container = Class(C2, 'c2Dep1', 'c2Dep2');
-	const c3Container = Class(C3, 'depC2', 'depP1');
+	expectType<Container<number, { b: boolean }, {}, { b: boolean }>>(cNum);
 
 	expectType<
-		ResolveWithRequiredDeps<
-			{ depP1: number } & {
-				depP1?: number;
-				depC2?: C2;
-				c2Dep1?: string;
-				c2Dep2?: number;
+		Container<
+			string,
+			{ n: number },
+			{ n: typeof cNum },
+			{ n: number } & { b: boolean }
+		>
+	>(cStr.register('n', cNum));
+
+	expectType<
+		Container<
+			string,
+			{ n: number },
+			{ n: typeof cNum },
+			{
+				n: number;
+			} & {
+				b: boolean;
+			}
+		>
+	>(cStr.register({ n: cNum }));
+
+	expectType<
+		Container<
+			string,
+			{ n: number },
+			{ n: typeof cNum; b: typeof cBool },
+			{
+				n: number;
+			} & {
+				b: boolean;
+			}
+		>
+	>(cStr.register('n', cNum).register({ b: cBool }));
+
+	expectType<
+		Container<
+			string,
+			{ n: number },
+			{
+				b: typeof cBool;
+				n: Container<number, {}, {}>;
 			},
-			C3
+			{
+				n: number;
+			}
+		>
+	>(cStr.register({ n: cNum }).register({ b: cBool, n: 123 }));
+
+	expectType<
+		Container<
+			string,
+			{ n: number },
+			{
+				b: typeof cBool;
+
+				n: Container<number, {}, {}>;
+			},
+			{
+				n: number;
+			}
 		>
 	>(
-		c3Container.register(
-			'depC2',
-			c2Container.register({
-				c2Dep1: constant('sdfsdf'),
-				c2Dep2: constant(123),
-			})
-		).resolve
+		cStr
+			.register({ n: cNum })
+			.register({ b: cBool })
+			.register('n', 123 as number)
 	);
+}
 
+declare const cBool2: Container<boolean, { str: string }, {}>;
+
+export function ofGrandChildrenDeps() {
 	expectType<
-		ResolveWithRequiredDeps<
-			{ depP1: number } & {
-				depP1?: number;
-				depC2?: C2;
-				c2Dep1?: string;
-				c2Dep2?: number;
+		Container<
+			boolean,
+			{ str: string },
+			{
+				str: typeof cStr;
+				n: typeof cNum;
+				b: Container<boolean, {}, {}>;
 			},
-			C3
+			{
+				str: string;
+			} & {
+				n: number;
+			} & { b: boolean }
 		>
 	>(
-		c3Container
-			.register({
-				depC2: c2Container.register({ c2Dep1: constant('sdfsdf') }),
-			})
-			.register({ c2Dep2: constant(123) }).resolve
+		cBool2
+			.register({ str: cStr })
+			.register({ n: cNum })
+			.register({ b: cBool })
 	);
-
-	expectType<C3>(
-		c3Container
-			.register({
-				depC2: c2Container.register({ c2Dep1: constant('sdfsdf') }),
-			})
-			.register({
-				c2Dep2: constant(123),
-				depP1: constant(123),
-			})
-			.resolve()
-	);
-
-	expectType<C3>(
-		c3Container
-			.register({
-				depC2: c2Container.register({
-					c2Dep1: constant('sdfsdf'),
-					c2Dep2: constant(123),
-				}),
-			})
-			.register({ depP1: constant(123) })
-			.resolve()
-	);
-}
-
-class C4 {
-	constructor(public c3: C3) {}
-}
-
-export function ofClassGrandChildrenDeps() {
-	const c2Container = Class(C2, 'c2Dep1', 'c2Dep2').register(
-		'c2Dep1',
-		constant('423')
-	);
-	const c3Container = Class(C3, 'depC2', 'depP1').register({
-		depC2: c2Container,
-	});
-	const c4Container = Class(C4, 'depC3').register({ depC3: c3Container });
 
 	expectType<
-		ResolveWithRequiredDeps<
-			{ depP1: number; c2Dep2: number } & {
-				depC3?: C3;
-				depP1?: number;
-				depC2?: C2;
-				c2Dep1?: string;
-				c2Dep2?: number;
+		Container<
+			boolean,
+			{ str: string },
+			{
+				str: typeof cStr;
+				n: typeof cNum;
+				b: Container<boolean, {}, {}>;
 			},
-			C4
+			{
+				str: string;
+			} & {
+				n: number;
+			} & { b: boolean }
 		>
-	>(c4Container.resolve);
+	>(cBool2.register('str', cStr).register('n', cNum).register('b', cBool));
 
 	expectType<
-		ResolveWithRequiredDeps<
-			{ depP1: number } & {
-				depC3?: C3;
-				depP1?: number;
-				depC2?: C2;
-				c2Dep1?: string;
-				c2Dep2?: number;
+		Container<
+			boolean,
+			{ str: string },
+			{
+				str: Container<
+					string,
+					{ n: number },
+					{
+						n: Container<
+							number,
+							{ b: boolean },
+							{ b: Container<boolean, {}, {}> }
+						>;
+					}
+				>;
 			},
-			C4
-		>
-	>(c4Container.register({ c2Dep2: constant(908) }).resolve);
-
-	expectType<C4>(
-		c4Container
-			.register({
-				depP1: constant(123),
-				c2Dep2: constant(908),
-			})
-			.resolve()
-	);
-}
-
-class C5 {
-	constructor(public c3: C3, public c6: C6) {}
-}
-
-class C6 {
-	constructor(public c2: C2) {}
-}
-
-export function ofClassOverrideDeps() {
-	const c5Container = Class(C5, 'depC3', 'depC6');
-	const c6Container = Class(C6, 'depC2');
-	const c3Container = Class(C3, 'depC2', 'c3Number');
-
-	class C2Child extends C2 {
-		constructor() {
-			super('', 0);
-		}
-	}
-
-	expectType<C5>(
-		c5Container
-			.register({
-				depC3: c3Container,
-				depC6: c6Container.register('depC2', Class(C2Child)),
-				c3Number: constant(34),
-			})
-			.resolve()
-	);
-
-	expectType<C5>(
-		c5Container
-			.register({
-				depC3: c3Container,
-				depC6: c6Container,
-				c3Number: constant(34),
-				depC2: Class(C2Child),
-			})
-			.resolve()
-	);
-
-	expectType<C5>(
-		c5Container
-			.register({
-				depC3: c3Container.register({
-					depC2: Class(C2, 'c2String', 'c2Number'),
-				}),
-			})
-			.register({
-				depC6: c6Container,
-				c3Number: constant(34),
-				depC2: Class(C2Child),
-			})
-			.resolve()
-	);
-
-	expectType<
-		ResolveWithRequiredDeps<
-			{ c2String: string; c2Number: number } & {
-				c2String?: string;
-				c2Number?: number;
-				depC3?: C3;
-				depC6?: C6;
-				depC2?: C2;
-				c3Number?: number;
-			},
-			C5
+			{
+				str: string;
+			} & {
+				n: number;
+			} & { b: boolean }
 		>
 	>(
-		c5Container
-			.register({
-				depC3: c3Container.register(
-					'depC2',
-					Class(C2, 'c2String', 'c2Number')
-				),
-			})
-			.register({
-				depC6: c6Container.register('depC2', Class(C2Child)),
-				c3Number: constant(34),
-			}).resolve
+		cBool2.register({
+			str: cStr.register({ n: cNum.register({ b: cBool }) }),
+		})
 	);
 
 	expectType<
-		ResolveWithRequiredDeps<
-			{ c3Number: number } & {
-				depC3?: C3;
-				depC6?: C6;
-				depC2?: C2;
-				c3Number?: number;
+		Container<
+			boolean,
+			{ str: string },
+			{
+				str: Container<string, {}, {}>;
+				n: Container<number, {}, {}>;
+				b: Container<boolean, {}, {}>;
 			},
-			C5
+			{ str: string }
 		>
 	>(
-		c5Container
-			.register({
-				depC3: c3Container.register({
-					depC2: Class(C2, 'c2String', 'c2Number'),
-					unknown: constant(123),
-				}),
-			})
-			.register({
-				depC6: c6Container,
-				depC2: Class(C2Child),
-			}).resolve
-	);
-
-	expectType<C5>(
-		c5Container
-			.register({
-				depC3: c3Container.register({
-					depC2: Class(C2, 'c2String', 'c2Number'),
-				}),
-			})
-			.register({
-				depC6: c6Container,
-				depC2: Class(C2Child),
-				c3Number: constant(34),
-			})
-			.resolve()
+		cBool2
+			.register('str', cStr)
+			.register('n', cNum)
+			.register('b', cBool)
+			.register('n', 123 as number)
+			.register('str', '123' as string)
 	);
 }
 
-export function ofClassErrors() {
-	const c3Container = Class(C3, 'depC2', 'c3Number');
+export function ofResolveErrors() {
+	expectError(cBool2.register({ unknown: '32' }));
+	expectError(cBool2.register({ str: 32 }));
+	expectError(cBool2.register({ str: cNum }));
+	expectError(cBool2.register({ unknown: cStr }));
 
 	/** @todo поправить, чтобы здесь была ошибка */
-	// expectError(
-	// 	c3Container.register({
-	// 		c3Number: constant(123),
-	// 		unknown: constant(321),
-	// 	})
-	// );
-
-	expectError(c3Container.register({ unknown: constant(321) }));
-
-	expectError(c3Container.register({ c3Number: constant('123') }));
+	// expectError(cBool2.register({ str: cStr, unknown: 123 }));
 }

@@ -1,9 +1,4 @@
-/**
- * @todo опциональные параметры у контейнеров?
- */
-export * from './createContainer';
+export * from './container';
 export * from './factory';
-export * from './class';
 export * from './computedValue';
-export * from './singleton';
-export * from './containerData';
+export * from './class';

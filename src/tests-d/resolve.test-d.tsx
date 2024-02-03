@@ -1,399 +1,307 @@
-import { expectType, expectError } from 'tsd';
-import { Class, constant, ResolveWithRequiredDeps } from '..';
+import { expectType, expectError, expectAssignable } from 'tsd';
+import { computedValue, Resolve } from '..';
 
-class C1 {
-	constructor(public p1: string) {}
-}
+declare const v: any;
 
-export function ofClassOneDepErrors() {
-	expectError(Class(C1));
-	expectError(Class(C1, 'dep1', 'dep2'));
-	expectError(Class(C1, 'dep1').register('dep1', constant(123)));
-	expectError(Class(C1, 'dep1').register('unknwn', constant(123)));
-}
+export function ofResolveTypeWithoutRequired() {
+	expectAssignable<() => boolean>(v as Resolve<boolean, {}, never>);
+	expectType<{
+		(): boolean;
+		(d: Partial<{}> & object): boolean;
+	}>(v as Resolve<boolean, {}, never>);
 
-class C2 {
-	constructor(public p1: string, public p2: number) {}
-}
+	expectType<boolean>((v as Resolve<boolean, {}, never>)());
 
-export function ofClassTwoDepErrors() {
-	expectError(Class(C2));
-	expectError(Class(C2, 'dep1'));
-	expectError(Class(C2, 'dep1', 'dep2', 'dep3'));
-}
+	expectType<{
+		(): boolean;
+		(d: { dep1?: number; dep2?: string } & object): boolean;
+	}>(v as Resolve<boolean, { dep1: number; dep2: string }, never>);
 
-class C3 {
-	constructor(public c2: C2, public p2: number) {}
-}
-
-export function ofClassChildrenDeps() {
-	const c2Container = Class(C2, 'c2Dep1', 'c2Dep2');
-	const c3Container = Class(C3, 'depC2', 'depP1');
-
-	expectType<
-		ResolveWithRequiredDeps<
-			{ c2Dep2: number } & {
-				depC2?: C2;
-				depP1?: number;
-				c2Dep1?: string;
-				c2Dep2?: number;
-			},
-			C3
-		>
-	>(
-		c3Container
-			.register(
-				'depC2',
-				c2Container.register('c2Dep1', constant('sdfsdf'))
-			)
-			.register('depP1', constant(123)).resolve
+	expectType<boolean>(
+		(v as Resolve<boolean, { dep1: number; dep2: string }, never>)()
 	);
 
-	expectType<
-		ResolveWithRequiredDeps<
-			{ depP1: number } & {
-				depC2?: C2;
-				depP1?: number;
-				c2Dep1?: string;
-				c2Dep2?: number;
-			},
-			C3
-		>
-	>(
-		c3Container.register(
-			'depC2',
-			c2Container
-				.register('c2Dep1', constant('sdfsdf'))
-				.register('c2Dep2', constant(123))
+	expectType<boolean>(
+		(v as Resolve<boolean, { dep1: number; dep2: string }, never>)({})
+	);
+
+	expectType<boolean>(
+		(v as Resolve<boolean, { dep1: number; dep2: string }, never>)({
+			dep1: 123,
+			dep2: 'sdfsf',
+		})
+	);
+}
+
+export function ofResolveTypeWithRequired() {
+	expectType<(params: { dep1: number; dep2?: string }) => boolean>(
+		v as Resolve<boolean, { dep1: number; dep2: string }, 'dep1'>
+	);
+
+	expectType<(params: { dep1?: number; dep2: string }) => boolean>(
+		v as Resolve<boolean, { dep1: number; dep2: string }, 'dep2'>
+	);
+
+	expectType<(params: { dep1: number; dep2: string }) => boolean>(
+		v as Resolve<boolean, { dep1: number; dep2: string }, 'dep1' | 'dep2'>
+	);
+}
+
+export function ofResolveTypeErrors() {
+	expectError<boolean>((v as Resolve<boolean, {}, never>)('key'));
+
+	expectError(
+		(v as Resolve<boolean, { dep1: number; dep2: string }, never>)(
+			'dep2',
+			'sdf'
+		)
+	);
+
+	expectError(
+		(v as Resolve<boolean, { dep1: number; dep2: string }, never>)(
+			'unknown'
+		)
+	);
+
+	expectError(
+		(v as Resolve<boolean, { dep1: number; dep2: string }, never>)({
+			unknown: 123,
+		})
+	);
+}
+
+export function ofContainerResolve() {
+	expectType<Resolve<boolean, {}, never>>(computedValue(() => true).resolve);
+
+	expectType<Resolve<boolean, { num: number; str: string }, never>>(
+		computedValue((n: number, s: string) => true, 'num', 'str').register({
+			num: 123,
+			str: 'dgs',
+		}).resolve
+	);
+
+	expectType<Resolve<boolean, { num: number; str: string }, 'str'>>(
+		computedValue((n: number, s: string) => true, 'num', 'str').register(
+			'num',
+			123
+		).resolve
+	);
+
+	expectType<Resolve<boolean, { num: number; str: string }, 'num' | 'str'>>(
+		computedValue((n: number, s: string) => true, 'num', 'str').resolve
+	);
+
+	expectType<Resolve<boolean, { num: number } & { str: string }, never>>(
+		computedValue((n: number) => true, 'num')
+			.register(
+				'num',
+				computedValue((s: string) => s.length, 'str')
+			)
+			.register('str', 'val').resolve
+	);
+
+	expectType<Resolve<boolean, { num: number } & { str: string }, never>>(
+		computedValue((n: number) => true, 'num').register(
+			'num',
+			computedValue((s: string) => s.length, 'str').register('str', 'val')
+		).resolve
+	);
+
+	expectType<Resolve<boolean, { num: number } & { str: string }, 'str'>>(
+		computedValue((n: number) => true, 'num').register(
+			'num',
+			computedValue((s: string) => s.length, 'str')
 		).resolve
 	);
 
 	expectType<
-		ResolveWithRequiredDeps<
-			{ depP1: number } & {
-				depC2?: C2;
-				depP1?: number;
-				c2Dep1?: string;
-				c2Dep2?: number;
-			},
-			C3
+		Resolve<
+			boolean,
+			{ num: number } & { str: string } & { bool: boolean },
+			'bool'
 		>
 	>(
-		c3Container
-			.register(
-				'depC2',
-				c2Container.register('c2Dep1', constant('sdfsdf'))
+		computedValue((n: number) => true, 'num').register(
+			'num',
+			computedValue((s: string) => s.length, 'str').register(
+				'str',
+				computedValue((b: boolean) => 'sdd', 'bool')
 			)
-			.register('c2Dep2', constant(123)).resolve
+		).resolve
 	);
 
 	expectType<
-		ResolveWithRequiredDeps<
-			{ depP1: number } & {
-				depC2?: C2;
-				depP1?: number;
-				c2Dep1?: string;
-				c2Dep2?: number;
-			},
-			C3
+		Resolve<
+			boolean,
+			{ num: number } & { str: string } & { bool: boolean },
+			never
 		>
 	>(
-		c3Container
+		computedValue((n: number) => true, 'num')
 			.register(
-				'depC2',
-				c2Container.register('c2Dep1', constant('sdfsdf'))
-			)
-			.register('c2Dep2', constant(123)).resolve
-	);
-
-	expectType<C3>(
-		c3Container
-			.register(
-				'depC2',
-				c2Container.register('c2Dep1', constant('sdfsdf'))
-			)
-			.register('c2Dep2', constant(123))
-			.register('depP1', constant(123))
-			.resolve()
-	);
-
-	expectType<C3>(
-		c3Container
-			.register(
-				'depC2',
-				c2Container
-					.register('c2Dep1', constant('sdfsdf'))
-					.register('c2Dep2', constant(123))
-			)
-			.register('depP1', constant(123))
-			.resolve()
-	);
-}
-
-class C4 {
-	constructor(public c3: C3) {}
-}
-
-export function ofClassGrandChildrenDeps() {
-	const c2Container = Class(C2, 'c2Dep1', 'c2Dep2').register(
-		'c2Dep1',
-		constant('423')
-	);
-	const c3Container = Class(C3, 'depC2', 'depP1').register(
-		'depC2',
-		c2Container
-	);
-	const c4Container = Class(C4, 'depC3').register('depC3', c3Container);
-
-	expectType<
-		ResolveWithRequiredDeps<
-			{ depP1: number; c2Dep2: number } & {
-				depP1?: number;
-				c2Dep2?: number;
-				depC3?: C3;
-				depC2?: C2;
-				c2Dep1?: string;
-			},
-			C4
-		>
-	>(c4Container.resolve);
-
-	expectType<
-		ResolveWithRequiredDeps<
-			{ depP1: number } & {
-				depP1?: number;
-				c2Dep2?: number;
-				depC3?: C3;
-				depC2?: C2;
-				c2Dep1?: string;
-			},
-			C4
-		>
-	>(c4Container.register('c2Dep2', constant(908)).resolve);
-
-	expectType<C4>(
-		c4Container
-			.register('depP1', constant(123))
-			.register('c2Dep2', constant(908))
-			.resolve()
-	);
-}
-
-class C5 {
-	constructor(public c3: C3, public c6: C6) {}
-}
-
-class C6 {
-	constructor(public c2: C2) {}
-}
-
-export function ofClassOverrideDeps() {
-	const c5Container = Class(C5, 'depC3', 'depC6');
-	const c6Container = Class(C6, 'depC2');
-	const c3Container = Class(C3, 'depC2', 'c3Number');
-
-	class C2Child extends C2 {
-		constructor() {
-			super('', 0);
-		}
-	}
-
-	expectType<C5>(
-		c5Container
-			.register('depC3', c3Container)
-			.register('depC6', c6Container.register('depC2', Class(C2Child)))
-			.register('c3Number', constant(34))
-			.resolve()
-	);
-
-	expectType<C5>(
-		c5Container
-			.register('depC3', c3Container)
-			.register('depC6', c6Container)
-			.register('c3Number', constant(34))
-			.register('depC2', Class(C2Child))
-			.resolve()
-	);
-
-	expectType<C5>(
-		c5Container
-			.register(
-				'depC3',
-				c3Container.register('depC2', Class(C2, 'c2String', 'c2Number'))
-			)
-			.register('depC6', c6Container)
-			.register('c3Number', constant(34))
-			.register('depC2', Class(C2Child))
-			.register('c2Number', constant(123))
-			.register('c2String', constant('sdf'))
-			.resolve()
-	);
-
-	expectType<C5>(
-		c5Container
-			.register(
-				'depC3',
-				c3Container.register('depC2', Class(C2, 'c2String', 'c2Number'))
-			)
-			.register('depC6', c6Container)
-			.register('c3Number', constant(34))
-			.register('depC2', Class(C2Child))
-			.resolve()
-	);
-
-	expectType<
-		ResolveWithRequiredDeps<
-			{ c2String: string; c2Number: number } & {
-				c2String?: string;
-				c2Number?: number;
-				depC3?: C3;
-				depC6?: C6;
-				depC2?: C2;
-				c3Number?: number;
-			},
-			C5
-		>
-	>(
-		c5Container
-			.register(
-				'depC3',
-				c3Container.register('depC2', Class(C2, 'c2String', 'c2Number'))
-			)
-			.register('depC6', c6Container.register('depC2', Class(C2Child)))
-			.register('c3Number', constant(34)).resolve
-	);
-
-	expectType<
-		ResolveWithRequiredDeps<
-			{ c3Number: number } & {
-				depC3?: C3;
-				depC6?: C6;
-				depC2?: C2;
-				c3Number?: number;
-			},
-			C5
-		>
-	>(
-		c5Container
-			.register(
-				'depC3',
-				c3Container.register('depC2', Class(C2, 'c2String', 'c2Number'))
-			)
-			.register('depC6', c6Container)
-			.register('depC2', Class(C2Child)).resolve
-	);
-
-	expectType<C5>(
-		c5Container
-			.register(
-				'depC3',
-				c3Container.register('depC2', Class(C2, 'c2String', 'c2Number'))
-			)
-			.register('depC6', c6Container)
-			.register('depC2', Class(C2Child))
-			.register('c3Number', constant(34))
-			.resolve()
-	);
-}
-
-export function ofClassResolveAcceptableParams() {
-	const c5Container = Class(C5, 'depC3', 'depC6');
-	const c6Container = Class(C6, 'depC2');
-	const c3Container = Class(C3, 'depC2', 'c3Number');
-
-	class C2Child extends C2 {
-		constructor() {
-			super('', 0);
-		}
-	}
-
-	expectType<C2>(
-		c6Container.register('depC2', Class(C2Child)).resolve('depC2')
-	);
-
-	expectType<C2>(
-		c3Container
-			.register('depC2', Class(C2Child))
-			.register('c3Number', constant(123))
-			.resolve('depC2')
-	);
-
-	expectType<number>(
-		c3Container
-			.register('depC2', Class(C2Child))
-			.register('c3Number', constant(123))
-			.resolve('c3Number')
-	);
-
-	expectType<number>(
-		c5Container
-			.register(
-				'depC3',
-				c3Container.register(
-					'depC2',
-					Class(C2, 'c2String', 'c2Number').register(
-						'c2Number',
-						constant(123)
-					)
+				'num',
+				computedValue((s: string) => s.length, 'str').register(
+					'str',
+					computedValue((b: boolean) => 'sdd', 'bool')
 				)
 			)
-			.register('depC6', c6Container)
-			.register('c3Number', constant(34))
-			.register('c2String', constant('sdf'))
-			.resolve('c2Number')
+			.register({ bool: true }).resolve
+	);
+}
+
+export function ofContainerResolveManyChildren() {
+	expectType<
+		Resolve<
+			boolean,
+			{ num: number; str: string; num2: number; str2: string },
+			'num2' | 'str2'
+		>
+	>(
+		computedValue((n: number, s: string) => true, 'num', 'str').register({
+			num: computedValue((n: number) => n, 'num2'),
+			str: computedValue((s: string) => s, 'str2'),
+		}).resolve
 	);
 
-	expectType<string>(
-		c5Container
-			.register(
-				'depC3',
-				c3Container.register(
-					'depC2',
-					Class(C2, 'c2String', 'c2Number').register(
-						'c2Number',
-						constant(123)
-					)
-				)
-			)
-			.register('depC6', c6Container)
-			.register('c3Number', constant(34))
-			.register('c2String', constant('sdf'))
-			.resolve('c2String')
+	expectType<
+		Resolve<
+			boolean,
+			{ num: number; str: string } & { num2: number } & { str2: string },
+			never
+		>
+	>(
+		computedValue((n: number, s: string) => true, 'num', 'str').register({
+			num: computedValue((n: number) => n, 'num2').register('num2', 123),
+			str: computedValue((s: string) => s, 'str2').register(
+				'str2',
+				'sdf'
+			),
+		}).resolve
 	);
 
-	expectError(
-		c5Container
-			.register(
-				'depC3',
-				c3Container.register('depC2', Class(C2, 'c2String', 'c2Number'))
-			)
-			.register('depC6', c6Container)
-			.register('depC2', Class(C2Child))
-			.register('c3Number', constant(34))
-			.resolve('c2String')
+	expectType<
+		Resolve<
+			boolean,
+			{ num: number; str: string } & { num2: number } & { str2: string },
+			never
+		>
+	>(
+		computedValue((n: number, s: string) => true, 'num', 'str')
+			.register({
+				num: computedValue((n: number) => n, 'num2'),
+				str: computedValue((s: string) => s, 'str2'),
+			})
+			.register('num2', 123)
+			.register('str2', 'sdf').resolve
 	);
 
-	expectError(
-		c5Container
-			.register(
-				'depC3',
-				c3Container.register('depC2', Class(C2, 'c2String', 'c2Number'))
-			)
-			.register('depC6', c6Container)
-			.register('depC2', Class(C2Child))
-			.register('c3Number', constant(34))
-			.resolve('c2Number')
+	expectType<
+		Resolve<boolean, { num: number; str: string } & { num2: number }, never>
+	>(
+		computedValue((n: number, s: string) => true, 'num', 'str')
+			.register({
+				num: computedValue((n: number) => n, 'num2'),
+				str: computedValue((s: number) => String(s), 'num2'),
+			})
+			.register('num2', 123).resolve
 	);
 
-	expectError(
-		c5Container
-			.register(
-				'depC3',
-				c3Container.register('depC2', Class(C2, 'c2String', 'c2Number'))
-			)
-			.register('depC6', c6Container)
-			.register('depC2', Class(C2Child))
-			.register('c3Number', constant(34))
-			.resolve('unknown')
+	expectType<
+		Resolve<
+			boolean,
+			{ num: number; str: string } & { num2: number },
+			'num2'
+		>
+	>(
+		computedValue((n: number, s: string) => true, 'num', 'str').register({
+			num: computedValue((n: number) => n, 'num2'),
+			str: computedValue((s: number) => String(s), 'num2'),
+		}).resolve
+	);
+
+	expectType<
+		Resolve<
+			boolean,
+			{ num: number; str: string } & { num2: number },
+			'num2'
+		>
+	>(
+		computedValue((n: number, s: string) => true, 'num', 'str').register({
+			num: computedValue((n: number) => n, 'num2').register('num2', 123),
+			str: computedValue((s: number) => String(s), 'num2'),
+		}).resolve
+	);
+
+	expectType<
+		Resolve<boolean, { num: number; str: string } & { num2: number }, never>
+	>(
+		computedValue((n: number, s: string) => true, 'num', 'str').register({
+			num: computedValue((n: number) => n, 'num2').register('num2', 123),
+			str: computedValue((s: number) => String(s), 'num2').register(
+				'num2',
+				123
+			),
+		}).resolve
+	);
+
+	expectType<
+		Resolve<boolean, { num: number; str: string } & { p2: never }, 'p2'>
+	>(
+		computedValue((n: number, s: string) => true, 'num', 'str').register({
+			num: computedValue((n: number) => n, 'p2'),
+			str: computedValue((s: string) => s, 'p2'),
+		}).resolve
+	);
+
+	expectType<
+		Resolve<boolean, { num: number; str: string } & { p2: never }, 'p2'>
+	>(
+		computedValue((n: number, s: string) => true, 'num', 'str').register({
+			num: computedValue((n: number) => n, 'p2').register('p2', 123),
+			str: computedValue((s: string) => s, 'p2'),
+		}).resolve
+	);
+
+	expectType<
+		Resolve<
+			boolean,
+			{ num: number; str: string } & { p2: number } & { p2: string },
+			never
+		>
+	>(
+		computedValue((n: number, s: string) => true, 'num', 'str').register({
+			num: computedValue((n: number) => n, 'p2').register('p2', 123),
+			str: computedValue((s: string) => s, 'p2').register('p2', 'sdfsdf'),
+		}).resolve
+	);
+
+	expectType<Resolve<boolean, { num: number } & { p2: number }, 'p2'>>(
+		computedValue((n: number) => true, 'num').register({
+			num: computedValue((n: number) => n, 'p2'),
+		}).resolve
+	);
+
+	expectType<Resolve<boolean, { num: number }, never>>(
+		computedValue((n: number) => true, 'num')
+			.register({
+				num: computedValue((n: number) => n, 'p2'),
+			})
+			.register('num', 123).resolve
+	);
+
+	expectType<
+		Resolve<
+			boolean,
+			{ num: number } & { num2: number } & { num3: number },
+			never
+		>
+	>(
+		computedValue((n: number) => true, 'num')
+			.register({
+				num: computedValue((n: number) => n, 'num2').register({
+					num2: computedValue((n: number) => n, 'num3'),
+				}),
+			})
+			.register('num2', 123).resolve
 	);
 }

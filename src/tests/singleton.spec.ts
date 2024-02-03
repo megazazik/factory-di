@@ -1,397 +1,583 @@
 import tape from 'tape';
-import { Class, constant, singleton, SingletonManagerKey } from '..';
+import { Class, factory } from '..';
 
-class C0 {
+class Logger {
 	constructor() {}
 }
 
-tape('singleton. Without params', (t) => {
-	class C02 {
-		constructor() {}
-	}
+const loggerContainer = Class(Logger);
 
-	class C0Container {
-		constructor(public c01: C0, public c02: C02) {}
-	}
+class Child {
+	constructor(public logger: Logger) {}
+}
+const childContainer = Class(Child, 'logger');
 
-	const container = Class(C0Container, 'c01', 'c02')
-		.register('c01', singleton(Class(C0)))
-		.register('c02', singleton(Class(C02)));
-
-	const instance1 = container.resolve();
-	const instance2 = container.resolve();
-	const c01Instance = container.resolve('c01');
-
-	t.ok(c01Instance instanceof C0);
-	t.equal(c01Instance, instance1.c01);
-	t.equal(c01Instance, instance2.c01);
-
-	const c02Instance = container.resolve('c02');
-
-	t.ok(c02Instance instanceof C02);
-	t.equal(c02Instance, instance1.c02);
-	t.equal(c02Instance, instance2.c02);
-
-	t.end();
-});
-
-tape(
-	'singleton. One singleton returns same value via different dependencies',
-	(t) => {
-		class C0Container {
-			constructor(public c01: C0, public c01Copy: C0) {}
-		}
-
-		const singletonContainer = singleton(Class(C0));
-		const container = Class(C0Container, 'c01', 'c01Copy')
-			.register('c01', singletonContainer)
-			.register('c01Copy', singletonContainer);
-
-		const instance = container.resolve();
-		const c01Instance = container.resolve('c01');
-		const c01CopyInstance = container.resolve('c01Copy');
-
-		t.equal(c01Instance, instance.c01);
-		t.equal(c01Instance, instance.c01Copy);
-		t.equal(c01Instance, c01CopyInstance);
-
-		t.end();
-	}
-);
-
-tape('singleton. Different singletons return different values', (t) => {
-	class C0Container {
-		constructor(public c01: C0, public c01Copy: C0) {}
-	}
-
-	const container = Class(C0Container, 'c01', 'c01Copy')
-		.register('c01', singleton(Class(C0)))
-		.register('c01Copy', singleton(Class(C0)));
-
-	const instance = container.resolve();
-	const c01Instance = container.resolve('c01');
-	const c01CopyInstance = container.resolve('c01Copy');
-
-	t.equal(c01Instance, instance.c01);
-	t.equal(c01CopyInstance, instance.c01Copy);
-	t.notEqual(c01Instance, c01CopyInstance);
-
-	t.end();
-});
-
-class C1 {
-	constructor(public params: { c0: C0; strParam: string }) {}
+class ParentWithTwoChildren {
+	constructor(public child1: Child, public child2: Child) {}
 }
 
-tape('singleton. With params', (t) => {
-	class TestContainer {
-		constructor(public c1: C1, public c1Copy: C1) {}
-	}
+const parent2ChildContainer = Class(ParentWithTwoChildren, 'child1', 'child2');
 
-	const singletonContainer = singleton(
-		Class(C1, { c0: 'c0', strParam: 'strParam' })
-	);
+function loggersEquals(t: tape.Test, l1: Logger, l2: Logger, equal: boolean) {
+	t.ok(l1 instanceof Logger);
+	t.ok(l2 instanceof Logger);
 
-	const container = Class(TestContainer, 'c1', 'c1Copy')
-		.register('c1', singletonContainer)
-		.register('c1Copy', singletonContainer)
-		.register('c0', Class(C0))
-		.register('strParam', constant('strValue'));
-
-	const instance1 = container.resolve();
-	const instance2 = container.resolve();
-	const c1Instance = container.resolve('c1');
-	const c1CopyInstance = container.resolve('c1Copy');
-
-	t.ok(c1Instance instanceof C1);
-	t.equal(c1Instance, instance1.c1);
-	t.equal(c1Instance, instance1.c1Copy);
-	t.equal(c1Instance, instance2.c1);
-	t.equal(c1Instance, instance2.c1Copy);
-	t.equal(c1Instance, c1CopyInstance);
-
-	t.ok(c1Instance.params.c0 instanceof C0);
-	t.equal(c1Instance.params.strParam, 'strValue');
+	t.equal(l1 === l2, equal);
 
 	t.end();
+}
+
+tape('singleton. Two resolve', (t) => {
+	const c = childContainer
+		.register('logger', loggerContainer)
+		.singlton('logger');
+
+	loggersEquals(t, c.resolve().logger, c.resolve().logger, false);
 });
 
+// 4 кейса, когда один и тот же дочерний контейнер регистрируется как 2 разных зависимости
+// регистрация у потомка vs регистрация у родителя
+// указания синглтоном у потомка vs указания синглтоном у родителя
+
 tape(
-	'singleton. Different values inside different branches. Without params',
+	'singleton. Same child container used in 2 deps - 1. Register in child. Singleton of child',
 	(t) => {
-		class C0Container1 {
-			constructor(public c0: C0) {}
-		}
+		const c = childContainer
+			.register('logger', loggerContainer)
+			.singlton('logger');
 
-		class C0Container2 {
-			constructor(public c0: C0) {}
-		}
+		const container = parent2ChildContainer
+			.register('child1', c)
+			.register('child2', c);
 
-		class TestContainer {
-			constructor(public p1: C0Container1, public p2: C0Container2) {}
-		}
+		const parent = container.resolve();
 
-		const container = Class(TestContainer, 'p1', 'p2')
-			.register(
-				'p1',
-				Class(C0Container1, 'c0').register('c0', singleton(Class(C0)))
-			)
-			.register(
-				'p2',
-				Class(C0Container2, 'c0').register('c0', singleton(Class(C0)))
-			);
-		const instance = container.resolve();
-		const p1 = container.resolve('p1');
-		const p2 = container.resolve('p2');
-
-		t.ok(instance.p1.c0 instanceof C0);
-		t.ok(instance.p2.c0 instanceof C0);
-
-		t.notEqual(instance.p1, p1);
-		t.equal(instance.p1.c0, p1.c0);
-
-		t.notEqual(instance.p2, p2);
-		t.equal(instance.p2.c0, p2.c0);
-
-		t.notEqual(p1.c0, p2.c0);
-
-		t.end();
+		loggersEquals(t, parent.child1.logger, parent.child2.logger, false);
 	}
 );
 
 tape(
-	'singleton. Different values inside different branches. Different params',
+	'singleton. Same child container used in 2 deps - 2. Register in child. Singleton of parent',
 	(t) => {
-		class WithParams {
-			constructor(public strValue: string) {}
-		}
+		const c = childContainer.register('logger', loggerContainer);
+		const container = parent2ChildContainer
+			.register('child1', c)
+			.register('child2', c)
+			.singlton('logger');
 
-		class C0Container1 {
-			constructor(public p0: WithParams) {}
-		}
+		const parent = container.resolve();
 
-		class C0Container2 {
-			constructor(public p0: WithParams) {}
-		}
-
-		class TestContainer {
-			constructor(public p1: C0Container1, public p2: C0Container2) {}
-		}
-
-		const container = Class(TestContainer, 'p1', 'p2')
-			.register(
-				'p1',
-				Class(C0Container1, 'p0')
-					.register('p0', singleton(Class(WithParams, 'strValue')))
-					.register('strValue', constant('p1StrValue'))
-			)
-			.register(
-				'p2',
-				Class(C0Container2, 'p0')
-					.register('p0', singleton(Class(WithParams, 'strValue')))
-					.register('strValue', constant('p2StrValue'))
-			);
-
-		const instance = container.resolve();
-		const p1 = container.resolve('p1');
-		const p2 = container.resolve('p2');
-
-		t.ok(instance.p1.p0 instanceof WithParams);
-		t.ok(instance.p2.p0 instanceof WithParams);
-
-		t.notEqual(instance.p1, p1);
-		t.equal(instance.p1.p0, p1.p0);
-
-		t.notEqual(instance.p2, p2);
-		t.equal(instance.p2.p0, p2.p0);
-
-		t.notEqual(p1.p0, p2.p0);
-
-		t.equal(instance.p1.p0.strValue, 'p1StrValue');
-		t.equal(instance.p2.p0.strValue, 'p2StrValue');
-
-		t.end();
+		loggersEquals(t, parent.child1.logger, parent.child2.logger, false);
 	}
 );
 
-tape('singleton. Same value inside different branches. One singleton', (t) => {
-	class WithParams {
-		constructor(public strValue: string) {}
-	}
+tape(
+	'singleton. Same child container used in 2 deps - 3. Register in parent. Singleton of child',
+	(t) => {
+		const c = childContainer.singlton('logger');
+		const container = parent2ChildContainer
+			.register('child1', c)
+			.register('child2', c)
+			.register('logger', loggerContainer);
 
-	class C0Container1 {
-		constructor(public p0: WithParams) {}
-	}
+		const parent = container.resolve();
 
-	class C0Container2 {
-		constructor(public p0: WithParams) {}
+		loggersEquals(t, parent.child1.logger, parent.child2.logger, false);
 	}
+);
 
-	class TestContainer {
-		constructor(public p1: C0Container1, public p2: C0Container2) {}
+tape(
+	'singleton. Same child container used in 2 deps - 4. Register in parent. Singleton of parent',
+	(t) => {
+		const container = parent2ChildContainer
+			.register('child1', childContainer)
+			.register('child2', childContainer)
+			.register('logger', loggerContainer)
+			.singlton('logger');
+
+		const parent = container.resolve();
+
+		loggersEquals(t, parent.child1.logger, parent.child2.logger, true);
 	}
+);
 
-	const singletonContainer = singleton(Class(WithParams, 'strValue'));
-	const container = Class(TestContainer, 'p1', 'p2')
-		.register(
-			'p1',
-			Class(C0Container1, 'p0')
-				.register('p0', singletonContainer)
-				.register('strValue', constant('p1StrValue'))
-		)
-		.register(
-			'p2',
-			Class(C0Container2, 'p0')
-				.register('p0', singletonContainer)
-				.register('strValue', constant('p2StrValue'))
+// 9 кейса, когда 1 фабрика регистрируется как 2 разных зависимости
+// регистрация у потомка VS регистрация у фабрики VS регистрация у родителя
+// синглтон у потомка VS синглтон у фабрики VS синглтон у родителя
+
+class ParentWithTwoFactoryChildren {
+	constructor(
+		public createChild1: () => Child,
+		public createChild2: () => Child
+	) {}
+}
+
+const parent2FactoryChildContainer = Class(
+	ParentWithTwoFactoryChildren,
+	'child1',
+	'child2'
+);
+
+tape(
+	'singleton. Same factory used in 2 deps - 1. Register in child. Singleton of child',
+	(t) => {
+		const f = factory(
+			childContainer
+				.register('logger', loggerContainer)
+				.singlton('logger')
 		);
+		const container = parent2FactoryChildContainer
+			.register('child1', f)
+			.register('child2', f);
 
-	const instance = container.resolve();
-	const p1 = container.resolve('p1');
-	const p2 = container.resolve('p2');
+		const parent = container.resolve();
 
-	t.ok(instance.p1.p0 instanceof WithParams);
-	t.ok(instance.p2.p0 instanceof WithParams);
-
-	t.notEqual(instance.p1, p1);
-	t.equal(instance.p1.p0, p1.p0);
-
-	t.notEqual(instance.p2, p2);
-	t.equal(instance.p2.p0, p2.p0);
-
-	t.equal(p1.p0, p2.p0);
-
-	t.ok(
-		instance.p1.p0.strValue === 'p1StrValue' ||
-			instance.p2.p0.strValue === 'p2StrValue'
-	);
-
-	t.end();
-});
-
-tape(
-	'singleton. Different values inside different containers. One singleton',
-	(t) => {
-		class WithParams {
-			constructor(public strValue: string) {}
-		}
-
-		class C0Container1 {
-			constructor(public p0: WithParams) {}
-		}
-
-		class C0Container2 {
-			constructor(public p0: WithParams) {}
-		}
-
-		class TestContainer {
-			constructor(public p1: C0Container1, public p2: C0Container2) {}
-		}
-
-		const singletonContainer = singleton(Class(WithParams, 'strValue'));
-
-		const c0Container1 = Class(C0Container1, 'p0')
-			.register('p0', singletonContainer)
-			.register('strValue', constant('p1StrValue'));
-
-		const c0Container2 = Class(C0Container2, 'p0')
-			.register('p0', singletonContainer)
-			.register('strValue', constant('p2StrValue'));
-
-		const container = Class(TestContainer, 'p1', 'p2')
-			.register('p1', c0Container1)
-			.register('p2', c0Container2);
-
-		const instance = container.resolve();
-		const p1 = c0Container1.resolve();
-		const p2 = c0Container2.resolve();
-
-		t.ok(instance.p1.p0 instanceof WithParams);
-		t.ok(instance.p2.p0 instanceof WithParams);
-		t.ok(p1.p0 instanceof WithParams);
-		t.ok(p2.p0 instanceof WithParams);
-
-		t.equal(instance.p1.p0, instance.p2.p0);
-
-		t.notEqual(instance.p1.p0, p1.p0);
-		t.notEqual(instance.p2.p0, p2.p0);
-		t.notEqual(p1.p0, p2.p0);
-
-		t.equal(p1.p0.strValue, 'p1StrValue');
-		t.equal(p2.p0.strValue, 'p2StrValue');
-
-		t.ok(
-			instance.p1.p0.strValue === 'p1StrValue' ||
-				instance.p2.p0.strValue === 'p2StrValue'
+		loggersEquals(
+			t,
+			parent.createChild1().logger,
+			parent.createChild2().logger,
+			false
 		);
-
-		t.end();
 	}
 );
 
-tape('singleton. Clear instances', (t) => {
-	class C02 {
-		constructor() {}
+tape(
+	'singleton. Same factory used in 2 deps - 2. Register in child. Singleton of factory',
+	(t) => {
+		const f = factory(
+			childContainer.register('logger', loggerContainer)
+		).singlton('logger');
+		const container = parent2FactoryChildContainer
+			.register('child1', f)
+			.register('child2', f);
+
+		const parent = container.resolve();
+
+		loggersEquals(
+			t,
+			parent.createChild1().logger,
+			parent.createChild2().logger,
+			false
+		);
 	}
+);
 
-	class C0Container {
-		constructor(public c01: C0, public c02: C02) {}
+tape(
+	'singleton. Same factory used in 2 deps - 3. Register in child. Singleton of parent',
+	(t) => {
+		const f = factory(childContainer.register('logger', loggerContainer));
+		const container = parent2FactoryChildContainer
+			.register('child1', f)
+			.register('child2', f)
+			.singlton('logger');
+
+		const parent = container.resolve();
+
+		loggersEquals(
+			t,
+			parent.createChild1().logger,
+			parent.createChild2().logger,
+			false
+		);
 	}
+);
 
-	const container = Class(C0Container, 'c01', 'c02')
-		.register('c01', singleton(Class(C0)))
-		.register('c02', singleton(Class(C02)));
+tape(
+	'singleton. Same factory used in 2 deps - 4. Register in factory. Singleton of child',
+	(t) => {
+		const f = factory(childContainer.singlton('logger')).register(
+			'logger',
+			loggerContainer
+		);
+		const container = parent2FactoryChildContainer
+			.register('child1', f)
+			.register('child2', f);
 
-	const instance1 = container.resolve();
-	const instance2 = container.resolve();
+		const parent = container.resolve();
 
-	// проверка объектов первого контейнера
-	t.ok(instance1.c01 instanceof C0);
-	t.equal(instance2.c01, instance1.c01);
+		loggersEquals(
+			t,
+			parent.createChild1().logger,
+			parent.createChild2().logger,
+			false
+		);
+	}
+);
 
-	t.ok(instance1.c02 instanceof C02);
-	t.equal(instance2.c02, instance1.c02);
+tape(
+	'singleton. Same factory used in 2 deps - 5. Register in factory. Singleton of factory',
+	(t) => {
+		const f = factory(childContainer)
+			.register('logger', loggerContainer)
+			.singlton('logger');
+		const container = parent2FactoryChildContainer
+			.register('child1', f)
+			.register('child2', f);
 
-	const container2 = Class(C0Container, 'c01', 'c02')
-		.register('c01', singleton(Class(C0)))
-		.register('c02', singleton(Class(C02)));
+		const parent = container.resolve();
 
-	const instance1_2 = container2.resolve();
-	const instance2_2 = container2.resolve();
+		loggersEquals(
+			t,
+			parent.createChild1().logger,
+			parent.createChild2().logger,
+			false
+		);
+	}
+);
 
-	// проверка объектов второго контейнера
-	t.ok(instance1_2.c01 instanceof C0);
-	t.equal(instance2_2.c01, instance1_2.c01);
+tape(
+	'singleton. Same factory used in 2 deps - 6. Register in factory. Singleton of parent',
+	(t) => {
+		const f = factory(childContainer).register('logger', loggerContainer);
+		const container = parent2FactoryChildContainer
+			.register('child1', f)
+			.register('child2', f)
+			.singlton('logger');
 
-	t.ok(instance1_2.c02 instanceof C02);
-	t.equal(instance2_2.c02, instance1_2.c02);
+		const parent = container.resolve();
 
-	t.notEqual(instance2.c01, instance1_2.c01);
+		loggersEquals(
+			t,
+			parent.createChild1().logger,
+			parent.createChild2().logger,
+			false
+		);
+	}
+);
 
-	container.resolve(SingletonManagerKey).clear();
+tape(
+	'singleton. Same factory used in 2 deps - 7. Register in parent. Singleton of child',
+	(t) => {
+		const f = factory(childContainer.singlton('logger'));
+		const container = parent2FactoryChildContainer
+			.register('child1', f)
+			.register('child2', f)
+			.register('logger', loggerContainer);
+		const parent = container.resolve();
 
-	const instance1_new = container.resolve();
-	const instance2_new = container.resolve();
+		loggersEquals(
+			t,
+			parent.createChild1().logger,
+			parent.createChild2().logger,
+			false
+		);
+	}
+);
 
-	// проверка объектов первого сброшенного контейнера
-	t.ok(instance1_new.c01 instanceof C0);
-	t.equal(instance2_new.c01, instance1_new.c01);
+tape(
+	'singleton. Same factory used in 2 deps - 8. Register in parent. Singleton of factory',
+	(t) => {
+		const f = factory(childContainer).singlton('logger');
+		const container = parent2FactoryChildContainer
+			.register('child1', f)
+			.register('child2', f)
+			.register('logger', loggerContainer);
+		const parent = container.resolve();
 
-	t.ok(instance1_new.c02 instanceof C02);
-	t.equal(instance2_new.c02, instance1_new.c02);
+		loggersEquals(
+			t,
+			parent.createChild1().logger,
+			parent.createChild2().logger,
+			false
+		);
+	}
+);
 
-	t.notEqual(
-		instance1.c02,
-		instance1_new.c02,
-		'Old instances should be destroyed'
-	);
-	t.notEqual(
-		instance1_2.c02,
-		instance1_new.c02,
-		'New objects should not be equal objects of independent container'
-	);
-	t.equal(instance1_2.c02, container2.resolve().c02),
-		'Clear call should not affect independent caontainer';
+tape(
+	'singleton. Same factory used in 2 deps - 9. Register in parent. Singleton of parent',
+	(t) => {
+		const f = factory(childContainer);
+		const container = parent2FactoryChildContainer
+			.register('child1', f)
+			.register('child2', f)
+			.register('logger', loggerContainer)
+			.singlton('logger');
+		const parent = container.resolve();
 
-	t.end();
-});
+		loggersEquals(
+			t,
+			parent.createChild1().logger,
+			parent.createChild2().logger,
+			true
+		);
+	}
+);
+
+// 9 кейсов, когда 1 фабрика - несколько вызовов фабрики
+// регистрация у потомка vs регистрация у фабрики vs регистрация у родителя
+// синглтон у потомка vs синглтон у фабрики vs синглтон у родителя
+// + 1 кейс, когда 2 вызова resolve
+
+class ParentWithOneFactoryChildren {
+	constructor(public createChild: () => Child) {}
+}
+
+const parent1FactoryChildContainer = Class(
+	ParentWithOneFactoryChildren,
+	'child'
+);
+
+tape(
+	'singleton. One factory, 2 call - 1. Register in child. Singleton of child',
+	(t) => {
+		const f = factory(
+			childContainer
+				.register('logger', loggerContainer)
+				.singlton('logger')
+		);
+		const container = parent1FactoryChildContainer.register('child', f);
+		const parent = container.resolve();
+
+		loggersEquals(
+			t,
+			parent.createChild().logger,
+			parent.createChild().logger,
+			false
+		);
+	}
+);
+
+tape(
+	'singleton. One factory, 2 call - 2. Register in child. Singleton of factory',
+	(t) => {
+		const f = factory(
+			childContainer.register('logger', loggerContainer)
+		).singlton('logger');
+		const container = parent1FactoryChildContainer.register('child', f);
+		const parent = container.resolve();
+
+		loggersEquals(
+			t,
+			parent.createChild().logger,
+			parent.createChild().logger,
+			false
+		);
+	}
+);
+
+tape(
+	'singleton. One factory, 2 call - 3. Register in child. Singleton of parent',
+	(t) => {
+		const f = factory(childContainer.register('logger', loggerContainer));
+		const container = parent1FactoryChildContainer
+			.register('child', f)
+			.singlton('logger');
+		const parent = container.resolve();
+
+		loggersEquals(
+			t,
+			parent.createChild().logger,
+			parent.createChild().logger,
+			false
+		);
+	}
+);
+
+tape(
+	'singleton. One factory, 2 call - 4. Register in factory. Singleton of child',
+	(t) => {
+		const f = factory(childContainer.singlton('logger')).register(
+			'logger',
+			loggerContainer
+		);
+		const container = parent1FactoryChildContainer.register('child', f);
+		const parent = container.resolve();
+
+		loggersEquals(
+			t,
+			parent.createChild().logger,
+			parent.createChild().logger,
+			false
+		);
+	}
+);
+
+tape(
+	'singleton. One factory, 2 call - 5. Register in factory. Singleton of factory',
+	(t) => {
+		const f = factory(childContainer)
+			.register('logger', loggerContainer)
+			.singlton('logger');
+		const container = parent1FactoryChildContainer.register('child', f);
+		const parent = container.resolve();
+
+		loggersEquals(
+			t,
+			parent.createChild().logger,
+			parent.createChild().logger,
+			true
+		);
+	}
+);
+
+tape(
+	'singleton. One factory, 2 call - 6. Register in factory. Singleton of parent',
+	(t) => {
+		const f = factory(childContainer).register('logger', loggerContainer);
+		const container = parent1FactoryChildContainer
+			.register('child', f)
+			.singlton('logger');
+		const parent = container.resolve();
+
+		loggersEquals(
+			t,
+			parent.createChild().logger,
+			parent.createChild().logger,
+			true
+		);
+	}
+);
+
+tape(
+	'singleton. One factory, 2 call - 7. Register in parent. Singleton of child',
+	(t) => {
+		const f = factory(childContainer.singlton('logger'));
+		const container = parent1FactoryChildContainer
+			.register('child', f)
+			.register('logger', loggerContainer);
+		const parent = container.resolve();
+
+		loggersEquals(
+			t,
+			parent.createChild().logger,
+			parent.createChild().logger,
+			false
+		);
+	}
+);
+
+tape(
+	'singleton. One factory, 2 call - 8. Register in parent. Singleton of factory',
+	(t) => {
+		const f = factory(childContainer).singlton('logger');
+		const container = parent1FactoryChildContainer
+			.register('child', f)
+			.register('logger', loggerContainer);
+		const parent = container.resolve();
+
+		loggersEquals(
+			t,
+			parent.createChild().logger,
+			parent.createChild().logger,
+			true
+		);
+	}
+);
+
+tape(
+	'singleton. One factory, 2 call - 9. Register in parent. Singleton of parent',
+	(t) => {
+		const f = factory(childContainer);
+		const container = parent1FactoryChildContainer
+			.register('child', f)
+			.register('logger', loggerContainer)
+			.singlton('logger');
+		const parent = container.resolve();
+
+		loggersEquals(
+			t,
+			parent.createChild().logger,
+			parent.createChild().logger,
+			true
+		);
+	}
+);
+
+// 6 кейсов, когда общая зависимость у потомка и родителя
+// регистрация зависимости только в родителя vs регистрация зависимости и в родителе, и в потомке
+// пометка синглтоном у родителя vs пометка синглтоном у потомка vs пометка синглтоном и в родителе, и в потомке
+
+class ParentWithLogger {
+	constructor(public child: Child, public logger: Logger) {}
+}
+
+const parentWithLoggerContainer = Class(ParentWithLogger, 'child', 'logger');
+
+tape(
+	'singleton. Parent and child, same dep - 1. No register in child. Singleton of parent',
+	(t) => {
+		const container = parentWithLoggerContainer
+			.register('logger', loggerContainer)
+			.register('child', childContainer)
+			.singlton('logger');
+		const parent = container.resolve();
+
+		loggersEquals(t, parent.logger, parent.child.logger, true);
+	}
+);
+
+tape(
+	'singleton. Parent and child, same dep - 2. Register in child. Singleton of parent',
+	(t) => {
+		const container = parentWithLoggerContainer
+			.register('logger', loggerContainer)
+			.register(
+				'child',
+				childContainer.register('logger', loggerContainer)
+			)
+			.singlton('logger');
+		const parent = container.resolve();
+
+		loggersEquals(t, parent.logger, parent.child.logger, true);
+	}
+);
+
+tape(
+	'singleton. Parent and child, same dep - 3. No register in child. Singleton of parent',
+	(t) => {
+		const container = parentWithLoggerContainer
+			.register('logger', loggerContainer)
+			.register('child', childContainer.singlton('logger'));
+		const parent = container.resolve();
+
+		loggersEquals(t, parent.logger, parent.child.logger, false);
+	}
+);
+
+tape(
+	'singleton. Parent and child, same dep - 4. Register in child. Singleton of parent',
+	(t) => {
+		const container = parentWithLoggerContainer
+			.register('logger', loggerContainer)
+			.register(
+				'child',
+				childContainer
+					.singlton('logger')
+					.register('logger', loggerContainer)
+			);
+		const parent = container.resolve();
+
+		loggersEquals(t, parent.logger, parent.child.logger, false);
+	}
+);
+
+tape(
+	'singleton. Parent and child, same dep - 5. No register in child. Singleton of parent and child',
+	(t) => {
+		const container = parentWithLoggerContainer
+			.register('logger', loggerContainer)
+			.singlton('logger')
+			.register('child', childContainer.singlton('logger'));
+		const parent = container.resolve();
+
+		loggersEquals(t, parent.logger, parent.child.logger, true);
+	}
+);
+
+tape(
+	'singleton. Parent and child, same dep - 6. Register in child. Singleton of parent and child',
+	(t) => {
+		const container = parentWithLoggerContainer
+			.register('logger', loggerContainer)
+			.singlton('logger')
+			.register(
+				'child',
+				childContainer
+					.singlton('logger')
+					.register('logger', loggerContainer)
+			);
+		const parent = container.resolve();
+
+		loggersEquals(t, parent.logger, parent.child.logger, true);
+	}
+);

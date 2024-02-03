@@ -2,7 +2,7 @@
 	"compilerOptions": {
 		"sourceMap": false,
 		"module": "commonjs",
-		"target": "es5",
+		"target": "es2015",
 		"declaration": true,
 		"moduleResolution": "node",
 		"outDir": "./dist/",
@@ -12,6 +12,7 @@
 		"noImplicitAny": true,
 		"noImplicitReturns": true,
 		"noImplicitThis": true,
+		"strictNullChecks": true,
 		"experimentalDecorators": true
 	},
 	"files": ["src/index.ts"]

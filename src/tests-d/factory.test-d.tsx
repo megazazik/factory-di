@@ -4,9 +4,8 @@ import {
 	constant,
 	FactoryResolve,
 	factory,
-	ResolveWithRequiredDeps,
+	Resolve,
 	computedValue,
-	ContainerData,
 } from '..';
 
 export function ofFactoryWithoutDeps() {
@@ -25,12 +24,7 @@ export function ofFactoryOneDep() {
 }
 
 export function ofFactoryOneDepNoRegistered() {
-	expectType<
-		ResolveWithRequiredDeps<
-			{ dep1: number } & { dep1?: number },
-			{ value: number }
-		>
-	>(
+	expectType<Resolve<{ value: number }, { dep1: number }, 'dep1'>>(
 		factory((resolve: FactoryResolve<{ dep1: number }>) => ({
 			value: resolve('dep1'),
 		})).resolve
@@ -105,7 +99,7 @@ export function ofFactoryContainerParamList() {
 		Container<
 			(v2: number) => { v: string; v2: number },
 			{ vToken: string },
-			{ vToken: ContainerData<string, {}, {}> }
+			{ vToken: Container<string, {}, {}> }
 		>
 	>(factory(child4.register('vToken', 'vValue' as string), 'v2Token'));
 
@@ -113,8 +107,9 @@ export function ofFactoryContainerParamList() {
 		Container<
 			(v2: number) => { v: string; v2: number },
 			{ vToken: string },
-			{ vToken: ContainerData<string, {}, {}> } & {
-				v2Token: ContainerData<number, {}, {}>;
+			{
+				vToken: Container<string, {}, {}>;
+				v2Token: Container<number, {}, {}>;
 			}
 		>
 	>(
@@ -171,7 +166,7 @@ export function ofFactoryContainerParamObject() {
 		Container<
 			(params: { param: number }) => { v: string; v2: number },
 			{ vToken: string },
-			{ vToken: ContainerData<string, {}, {}> }
+			{ vToken: Container<string, {}, {}> }
 		>
 	>(
 		factory(child4.register('vToken', 'vValue' as string), {
@@ -182,8 +177,9 @@ export function ofFactoryContainerParamObject() {
 		Container<
 			(params: { param: number }) => { v: string; v2: number },
 			{ vToken: string },
-			{ vToken: ContainerData<string, {}, {}> } & {
-				v2Token: ContainerData<number, {}, {}>;
+			{
+				vToken: Container<string, {}, {}>;
+				v2Token: Container<number, {}, {}>;
 			}
 		>
 	>(

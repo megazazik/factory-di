@@ -1,250 +1,176 @@
-import { expectType, expectAssignable, expectError } from 'tsd';
-import {
-	Class,
-	Container,
-	constant,
-	ResolveWithRequiredDeps,
-	ContainerData,
-} from '..';
+import { expectError, expectType } from 'tsd';
+import { Container, Class, constant } from '..';
 
-class C0 {}
+export function ofComputedValueWithoutDeps() {
+	class C {
+		p1: string;
+	}
 
-export function ofClassWithoutDeps() {
-	expectType<Container<C0, {}, {}>>(Class(C0));
-	expectType<C0>(Class(C0).resolve());
+	expectType<Container<C, {}, {}>>(Class(C));
 }
 
-class C1 {
-	constructor(public p1: string) {}
+export function ofComputedValueOneDep() {
+	class C {
+		constructor(public p: number) {}
+	}
+
+	expectType<Container<C, { dep1: number }, {}>>(Class(C, 'dep1'));
 }
 
-export function ofClassOneDep() {
-	expectType<Container<C1, { dep1: string }, {}>>(Class(C1, 'dep1'));
-	expectType<C1>(
-		Class(C1, 'dep1').register('dep1', constant('asdfdf')).resolve()
+export function ofComputedValueTwoDep() {
+	class C {
+		constructor(public p1: number, public p2: string) {}
+	}
+
+	expectType<Container<C, { dep1: number; dep2: string }, {}>>(
+		Class(C, 'dep1', 'dep2')
+	);
+
+	class C1 {
+		constructor(public p1: number, public p2?: string) {}
+	}
+
+	expectType<Container<C1, { dep1: number; dep2: string | undefined }, {}>>(
+		Class(C1, 'dep1', 'dep2')
 	);
 }
 
-export function ofClassOneDepNoRegistered() {
-	expectType<C1>(Class(C1, 'dep1').resolve({ dep1: 'sdg' }));
+export function onComputedValueWithEmptyInterface() {
+	class C {
+		constructor(public p1: {}) {}
+	}
 
-	expectError(Class(C1, 'dep1').resolve({}));
+	expectType<Container<C, { p0: {} }, {}>>(Class(C, 'p0'));
+
+	class C1 {
+		constructor(public p1: { p?: boolean }) {}
+	}
+
+	expectType<Container<C1, { p0: { p?: boolean } }, {}>>(Class(C1, 'p0'));
 }
 
-class C2 {
-	constructor(public p1: string, public p2: number) {}
+export function ofComputedValueObjectOneDep() {
+	class C {
+		constructor(public params: { p: number }) {}
+	}
+	expectType<Container<C, { dep1: number }, {}>>(Class(C, { p: 'dep1' }));
 }
 
-export function ofClassTwoDep() {
-	expectType<Container<C2, { dep1: string } & { dep2: number }, {}>>(
-		Class(C2, 'dep1', 'dep2')
+export function ofComputedValueObjectTwoDep() {
+	class C {
+		constructor(public params: { p: number; p2: string }) {}
+	}
+
+	expectType<Container<C, { dep1: number; dep2: string }, {}>>(
+		Class(C, {
+			p: 'dep1',
+			p2: 'dep2',
+		})
 	);
 
-	expectType<C2>(
-		Class(C2, 'dep1', 'dep2')
-			.register('dep1', constant('asdfdf'))
-			.register('dep2', constant(123))
-			.resolve()
-	);
-}
+	class C1 {
+		constructor(public params: { p: number; p2?: string }) {}
+	}
 
-export function ofClassTwoDepNoRegistered() {
-	expectType<
-		ResolveWithRequiredDeps<
-			{ dep1: string; dep2: number } & { dep1?: string; dep2?: number },
-			C2
-		>
-	>(Class(C2, 'dep1', 'dep2').resolve);
-
-	expectType<
-		ResolveWithRequiredDeps<
-			{ dep1: string } & { dep1?: string; dep2?: number },
-			C2
-		>
-	>(Class(C2, 'dep1', 'dep2').register('dep2', constant(123)).resolve);
-}
-
-class C1Object {
-	constructor(public params: { p1: string }) {}
-}
-
-export function ofClassObjectOneDep() {
-	expectType<Container<C1Object, { dep1: string }, {}>>(
-		Class(C1Object, { p1: 'dep1' })
-	);
-	expectType<C1Object>(
-		Class(C1Object, { p1: 'dep1' })
-			.register('dep1', constant('asdfdf'))
-			.resolve()
+	expectType<Container<C1, { dep1: number; dep2?: string | undefined }, {}>>(
+		Class(C1, {
+			p: 'dep1',
+			p2: 'dep2',
+		})
 	);
 }
 
-export function ofClassObjectOneDepNoRegistered() {
-	expectAssignable<ResolveWithRequiredDeps<{ dep1: string }, C1Object>>(
-		Class(C1Object, { p1: 'dep1' }).resolve
-	);
-}
+export function ofComputedValueObjectOneDepNoToken() {
+	class C {
+		constructor(public params: { dep1: number }) {}
+	}
 
-class C2Object {
-	constructor(public params: { p1: string; p2: number }) {}
-}
-
-export function ofClassObjectTwoDep() {
-	expectType<Container<C2Object, { dep1: string } & { dep2: number }, {}>>(
-		Class(C2Object, { p1: 'dep1', p2: 'dep2' })
-	);
-
-	expectType<C2Object>(
-		Class(C2Object, { p1: 'dep1', p2: 'dep2' })
-			.register('dep1', constant('asdfdf'))
-			.register('dep2', constant(123))
-			.resolve()
-	);
-}
-
-export function ofClassObjectTwoDepNoRegistered() {
-	expectAssignable<
-		ResolveWithRequiredDeps<{ dep1: string; dep2: number }, C2Object>
-	>(Class(C2Object, { p1: 'dep1', p2: 'dep2' }).resolve);
-
-	expectAssignable<ResolveWithRequiredDeps<{ dep1: string }, C2Object>>(
-		Class(C2Object, { p1: 'dep1', p2: 'dep2' }).register(
-			'dep2',
-			constant(123)
-		).resolve
-	);
-}
-
-export function ofClassObjectOneDepNoToken() {
 	expectType<
 		Container<
-			C1Object,
-			{ p1: string },
-			{
-				p1: Container<string, {}, {}>;
-			}
+			C,
+			{ dep1: number },
+			{ readonly dep1: Container<number, {}, {}> }
 		>
-	>(Class(C1Object, { p1: constant('dep1') }));
-
-	expectType<C1Object>(Class(C1Object, { p1: constant('dep1') }).resolve());
+	>(Class(C, { dep1: constant(123) }));
 }
 
-class WithC1 {
-	constructor(public params: { c1: C1 }) {}
-}
+export function ofComputedValueObjectNoFullEmbeddedDepNoToken() {
+	class C1 {
+		constructor(public params: { c: C2 }) {}
+	}
 
-export function ofClassObjectFullEmbeddedDepNoToken() {
+	class C2 {
+		constructor(public params: number) {}
+	}
+
 	expectType<
 		Container<
-			WithC1,
-			{ c1: C1 },
+			C1,
+			{ c: C2 },
+			{ readonly c: Container<C2, { dep2: number }, {}> }
+		>
+	>(Class(C1, { c: Class(C2, 'dep2') }));
+}
+
+export function ofComputedValueObjectTwoDepNoToken() {
+	class C {
+		constructor(public params: { dep1: number; dep2: string }) {}
+	}
+
+	expectType<
+		Container<
+			C,
+			{ dep1: number; dep2: string },
 			{
-				c1: Container<
-					C1,
-					{ p1: string },
-					{ p1: Container<'sdfsf', {}, {}> }
-				>;
+				readonly dep1: Container<number, {}, {}>;
+				readonly dep2: Container<string, {}, {}>;
 			}
 		>
 	>(
-		Class(WithC1, {
-			c1: Class(C1, 'p1').register('p1', constant('sdfsf')),
+		Class(C, {
+			dep1: constant(321),
+			dep2: constant('sdfsdf'),
 		})
-	);
-
-	expectType<WithC1>(
-		Class(WithC1, {
-			c1: Class(C1, 'p1').register('p1', constant('sdfsf')),
-		}).resolve()
 	);
 }
 
-export function ofClassObjectNoFullEmbeddedDepNoToken() {
-	expectType<
-		Container<
-			WithC1,
-			{ c1: C1 },
-			{
-				c1: Container<C1, { p1: string }, {}>;
-			}
-		>
-	>(
-		Class(WithC1, {
-			c1: Class(C1, 'p1'),
-		})
-	);
-
-	expectType<WithC1>(
-		Class(WithC1, {
-			c1: Class(C1, 'p1'),
-		}).resolve({ p1: 'sdvdfv' })
-	);
-
-	expectError(
-		Class(WithC1, {
-			c1: Class(C1, 'p1'),
-		}).resolve()
-	);
-}
-
-export function ofClassObjectTwoDepNoToken() {
-	expectType<
-		Container<
-			C2Object,
-			{ p1: string } & { p2: number },
-			{
-				p1: Container<string, {}, {}>;
-				p2: Container<number, {}, {}>;
-			}
-		>
-	>(Class(C2Object, { p1: constant('123'), p2: constant(312) }));
-
-	expectType<C2Object>(
-		Class(C2Object, {
-			p1: constant('dep1'),
-			p2: constant(321),
-		}).resolve()
-	);
-}
-
-export function ofClassWrongParams() {
-	expectError(
-		Class(C2Object, {
-			p1: true,
-			p2: constant(321),
-		})
-	);
-
-	expectError(
-		Class(C2Object, {
-			p1: constant(321),
-			p2: constant(321),
-		})
-	);
-
-	/** @todo сделать, чтобы проходил один из следующих тестов */
-	// expectType<
-	// 	Container<
-	// 		C2Object,
-	// 		{ p1: string } & { p2: number },
-	// 		{
-	// 			p1: Container<string, {}, {}>;
-	// 			p2: Container<number, {}, {}>;
-	// 		}
-	// 	>
-	// >(
-	// 	Class(C2Object, {
-	// 		p1: constant('123'),
-	// 		p2: constant(312),
-	// 		p3: constant(123),
-	// 	})
-	// );
+export function ofComputedValueWrongParams() {
+	class C {
+		constructor(public params: { dep1: number; dep2: string }) {}
+	}
 
 	// expectError(
-	// 	Class(C2Object, {
-	// 		p1: constant('321'),
-	// 		p2: constant(321),
-	// 		p3: constant(321),
+	// 	Class(C, {
+	// 		dep1: 'd1',
+	// 		dep2: 'd2',
+	// 		p3: 'wrong',
 	// 	})
 	// );
+
+	expectError(
+		Class(C, {
+			dep2: constant('sdfsdf'),
+		})
+	);
+
+	expectError(
+		Class(C, {
+			dep1: true,
+			dep2: constant('sdfsdf'),
+		})
+	);
+
+	expectError(
+		Class(C, {
+			dep1: constant('321'),
+			dep2: constant('sdfsdf'),
+		})
+	);
+
+	class C1 {
+		constructor(dep1: number, dep2: string) {}
+	}
+
+	expectError(Class(C1, 'dep1'));
+	expectError(Class(C1, 'dep1', 'dep2', 'dep3'));
 }
