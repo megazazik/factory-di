@@ -254,3 +254,6 @@ export type HumanReadableType<T> = T extends infer U
 	? { [K in keyof U]: U[K] }
 	: never;
 // export type HumanReadableType<T> = T;
+
+export type AllDependenciesOfContainer<C extends Container<any, any, any>> =
+	C[typeof allDepsKey];

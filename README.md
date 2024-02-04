@@ -716,7 +716,7 @@ a.modules.module1.logger === a.modules.module2.logger; // true
 There are some factors of the `singleton` method behavior.
 
 -   if you make a dependency to be a singleton it affects only the current container and its children
--       two different containers registered with the same token create independent instances even if you mark this token as singleton
+-   two different containers registered with the same token create independent instances even if you mark this token as singleton
 -   if you register some dependency container twice it is considered as two independent containers and they create independent instances even if you mark them as singleton
 -   each call of the `resolve` method has its own set of singletons. During each call all singletons receive new instances
 -   if you use the `factory` function to create several instances then each call of the factory reinitializes singletons of all children containers of the factory. If you need some dependency to be a singleton inside all instances created by the factory you should register this dependency and mark it as singleton via the container of the factory or via some parent container
