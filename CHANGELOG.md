@@ -1,3 +1,12 @@
+## [3.0.1](https://github.com/megazazik/factory-di/compare/v3.0.0...v3.0.1) (2024-02-04)
+
+
+### Bug Fixes
+
+* **types:** restore type AllDependenciesOfContainer ([9debdbc](https://github.com/megazazik/factory-di/commit/9debdbcb1f7ee90226eb29e6fbf8854e83a8f01c))
+
+
+
 # [3.0.0](https://github.com/megazazik/factory-di/compare/v2.0.0...v3.0.0) (2024-02-03)
 
 
