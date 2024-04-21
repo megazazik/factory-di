@@ -1,3 +1,12 @@
+## [3.0.2](https://github.com/megazazik/factory-di/compare/v3.0.1...v3.0.2) (2024-04-21)
+
+
+### Bug Fixes
+
+* **factory:** fix type for factory child depencencies ([e868762](https://github.com/megazazik/factory-di/commit/e8687625d68b099b3db183061e41a97248c81873))
+
+
+
 ## [3.0.1](https://github.com/megazazik/factory-di/compare/v3.0.0...v3.0.1) (2024-02-04)
 
 
