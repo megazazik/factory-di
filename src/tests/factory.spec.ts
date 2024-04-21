@@ -182,3 +182,20 @@ tape('ofFactory. From container. Param object', (t) => {
 
 	t.end();
 });
+
+tape('ofFactory. Dependency of child container', (t) => {
+	const child = computedValue(({ p }: { p: string }) => p, 'childParam');
+
+	const parent = computedValue(
+		(v: string) => ({ parentValue: v }),
+		'parentValue'
+	).register('parentValue', child);
+
+	const factoryMethod = factory(parent, 'childParam').resolve();
+
+	t.deepEqual(factoryMethod({ p: 'valueOfChild' }), {
+		parentValue: 'valueOfChild',
+	});
+
+	t.end();
+});

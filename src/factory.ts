@@ -1,5 +1,11 @@
 import { constructorSymbol, createValueSymbol } from './innerMethods';
-import { Dependencies, Key, Container, HumanReadableType } from './container';
+import {
+	Dependencies,
+	Key,
+	Container,
+	HumanReadableType,
+	ComputeContainerAllDeps,
+} from './container';
 
 export type FactoryResolve<Params extends Record<Key, any>> = <
 	K extends keyof Params
@@ -24,28 +30,43 @@ export type Factory = {
 		T,
 		D extends Dependencies,
 		RD extends Record<Key, Container<any, any, any>>,
-		ParamsMap extends Record<Key, keyof D>
+		ParamsMap extends Record<Key, keyof ComputeContainerAllDeps<D, RD>>
 	>(
 		container: Container<T, D, RD>,
 		params: ParamsMap
 	): Container<
-		(params: FactoryParamsObject<ParamsMap, D>) => T,
-		HumanReadableType<Omit<D, ParamsMap[keyof ParamsMap]>>,
-		RD
+		(
+			params: FactoryParamsObject<
+				ParamsMap,
+				ComputeContainerAllDeps<D, RD>
+			>
+		) => T,
+		D,
+		// never - because this type probably won't be used, but it is dificult to calculate
+		HumanReadableType<
+			Omit<RD, ParamsMap[keyof ParamsMap]> & {
+				[K in ParamsMap[keyof ParamsMap]]: Container<never, {}, {}>;
+			}
+		>
 	>;
 	// factory(container, 'token1', 'token2')
 	<
 		T,
 		D extends Dependencies,
 		RD extends Record<Key, Container<any, any, any>>,
-		const Args extends readonly (keyof D)[]
+		const Args extends readonly (keyof ComputeContainerAllDeps<D, RD>)[]
 	>(
 		container: Container<T, D, RD>,
 		...args: Args
 	): Container<
-		(...args: FactoryParamsList<Args, D>) => T,
-		HumanReadableType<Omit<D, Args[number]>>,
-		RD
+		(...args: FactoryParamsList<Args, ComputeContainerAllDeps<D, RD>>) => T,
+		D,
+		// never - because this type probably won't be used, but it is dificult to calculate
+		HumanReadableType<
+			Omit<RD, Args[number]> & {
+				[K in Args[number]]: Container<never, {}, {}>;
+			}
+		>
 	>;
 	// factory((getValue) => getValue('token'))
 	<T, Params extends Record<Key, any>>(

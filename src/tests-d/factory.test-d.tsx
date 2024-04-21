@@ -66,9 +66,13 @@ export function ofFactoryContainerParamList() {
 	);
 
 	const child3 = computedValue((v: string) => ({ v }), 'vToken');
-	expectType<Container<(v: string) => { v: string }, {}, {}>>(
-		factory(child3, 'vToken')
-	);
+	expectType<
+		Container<
+			(v: string) => { v: string },
+			{ vToken: string },
+			{ vToken: Container<never, {}, {}> }
+		>
+	>(factory(child3, 'vToken'));
 
 	const child4 = computedValue(
 		(v: string, v2: number) => ({ v, v2 }),
@@ -76,40 +80,55 @@ export function ofFactoryContainerParamList() {
 		'v2Token'
 	);
 	expectType<
-		Container<(v: string, v2: number) => { v: string; v2: number }, {}, {}>
+		Container<
+			(v: string, v2: number) => { v: string; v2: number },
+			{
+				vToken: string;
+				v2Token: number;
+			},
+			{
+				vToken: Container<never, {}, {}>;
+				v2Token: Container<never, {}, {}>;
+			}
+		>
 	>(factory(child4, 'vToken', 'v2Token'));
 
 	expectType<
 		Container<
 			(v: string) => { v: string; v2: number },
-			{ v2Token: number },
-			{}
+			{ vToken: string; v2Token: number },
+			{
+				vToken: Container<never, {}, {}>;
+			}
 		>
 	>(factory(child4, 'vToken'));
 
 	expectType<
 		Container<
 			(v2: number) => { v: string; v2: number },
-			{ vToken: string },
-			{}
+			{ vToken: string; v2Token: number },
+			{ v2Token: Container<never, {}, {}> }
 		>
 	>(factory(child4, 'v2Token'));
 
 	expectType<
 		Container<
 			(v2: number) => { v: string; v2: number },
-			{ vToken: string },
-			{ vToken: Container<string, {}, {}> }
+			{ vToken: string; v2Token: number },
+			{
+				vToken: Container<string, {}, {}>;
+				v2Token: Container<never, {}, {}>;
+			}
 		>
 	>(factory(child4.register('vToken', 'vValue' as string), 'v2Token'));
 
 	expectType<
 		Container<
 			(v2: number) => { v: string; v2: number },
-			{ vToken: string },
+			{ vToken: string; v2Token: number },
 			{
 				vToken: Container<string, {}, {}>;
-				v2Token: Container<number, {}, {}>;
+				v2Token: Container<never, {}, {}>;
 			}
 		>
 	>(
@@ -125,7 +144,11 @@ export function ofFactoryContainerParamList() {
 export function ofFactoryContainerParamObject() {
 	const child3 = computedValue((v: string) => ({ v }), 'vToken');
 	expectType<
-		Container<(params: { vTokenParam: string }) => { v: string }, {}, {}>
+		Container<
+			(params: { vTokenParam: string }) => { v: string },
+			{ vToken: string },
+			{ vToken: Container<never, {}, {}> }
+		>
 	>(factory(child3, { vTokenParam: 'vToken' }));
 
 	const child4 = computedValue(
@@ -139,8 +162,11 @@ export function ofFactoryContainerParamObject() {
 				v: string;
 				v2: number;
 			},
-			{},
-			{}
+			{ vToken: string; v2Token: number },
+			{
+				vToken: Container<never, {}, {}>;
+				v2Token: Container<never, {}, {}>;
+			}
 		>
 	>(
 		factory(child4, {
@@ -151,22 +177,25 @@ export function ofFactoryContainerParamObject() {
 	expectType<
 		Container<
 			(params: { param: string }) => { v: string; v2: number },
-			{ v2Token: number },
-			{}
+			{ vToken: string; v2Token: number },
+			{ vToken: Container<never, {}, {}> }
 		>
 	>(factory(child4, { param: 'vToken' }));
 	expectType<
 		Container<
 			(params: { param: number }) => { v: string; v2: number },
-			{ vToken: string },
-			{}
+			{ vToken: string; v2Token: number },
+			{ v2Token: Container<never, {}, {}> }
 		>
 	>(factory(child4, { param: 'v2Token' }));
 	expectType<
 		Container<
 			(params: { param: number }) => { v: string; v2: number },
-			{ vToken: string },
-			{ vToken: Container<string, {}, {}> }
+			{ vToken: string; v2Token: number },
+			{
+				vToken: Container<string, {}, {}>;
+				v2Token: Container<never, {}, {}>;
+			}
 		>
 	>(
 		factory(child4.register('vToken', 'vValue' as string), {
@@ -176,10 +205,10 @@ export function ofFactoryContainerParamObject() {
 	expectType<
 		Container<
 			(params: { param: number }) => { v: string; v2: number },
-			{ vToken: string },
+			{ vToken: string; v2Token: number },
 			{
 				vToken: Container<string, {}, {}>;
-				v2Token: Container<number, {}, {}>;
+				v2Token: Container<never, {}, {}>;
 			}
 		>
 	>(

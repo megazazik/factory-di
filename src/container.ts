@@ -9,14 +9,19 @@ export type GetValue<Type, Deps extends Dependencies> = (
 	singltonTokens: Set<Key>
 ) => Type;
 
+export type ComputeContainerAllDeps<
+	Deps extends Dependencies,
+	RegisteredDeps extends Record<Key, Container<any, any, any>>
+> = Deps &
+	UnionToIntersection<
+		RegisteredDeps[keyof RegisteredDeps][typeof allDepsKey]
+	>;
+
 export class Container<
 	Type,
 	Deps extends Dependencies,
 	RegisteredDeps extends Record<Key, Container<any, any, any>>,
-	AllDeps extends Dependencies = Deps &
-		UnionToIntersection<
-			RegisteredDeps[keyof RegisteredDeps][typeof allDepsKey]
-		>
+	AllDeps extends Dependencies = ComputeContainerAllDeps<Deps, RegisteredDeps>
 > {
 	[depsKey]: Deps;
 	[registeredDepsKey]: RegisteredDeps;
