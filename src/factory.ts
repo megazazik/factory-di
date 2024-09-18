@@ -13,7 +13,7 @@ export type FactoryResolve<Params extends Record<Key, any>> = <
 	key: K
 ) => Params[K];
 
-export type Factory = {
+export interface Factory {
 	// factory(() => value)
 	<T>(factory: (getValue: FactoryResolve<{}>) => T): Container<T, {}, {}>;
 
@@ -72,7 +72,7 @@ export type Factory = {
 	<T, Params extends Record<Key, any>>(
 		factory: (getValue: FactoryResolve<Params>) => T
 	): Container<T, Params, {}>;
-};
+}
 
 export type FactoryParamsObject<
 	ParamsMap extends Record<Key, keyof D>,
