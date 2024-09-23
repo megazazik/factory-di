@@ -1,5 +1,6 @@
 import { constructorSymbol } from './innerMethods';
 import {
+	ComputeContainerAllDeps,
 	Container,
 	ContainerFromParamsAsObject,
 	DependenciesMap,
@@ -25,11 +26,16 @@ export interface OfComputedValue {
 	): Container<
 		T,
 		HumanReadableType<DepsFromParamsList<NumberKeysOnly<Keys>, Params>>,
-		{}
+		{},
+		ComputeContainerAllDeps<
+			HumanReadableType<DepsFromParamsList<NumberKeysOnly<Keys>, Params>>,
+			{}
+		>
 	>;
 }
 
-export const computedValue: OfComputedValue = <T>(
+export const computedValue: OfComputedValue = (<T>(
+	// export const computedValue: (...args: any[]) => Container<any, any, any> = <T>(
 	getValue: (...args: any[]) => T,
 	...argNames: (string | object)[]
 ) => {
@@ -62,4 +68,4 @@ export const computedValue: OfComputedValue = <T>(
 			getValue(...argNames.map((k) => resolve(k)?.value ?? undefined)),
 		{}
 	) as Container<T, {}, {}>;
-};
+}) as any;
