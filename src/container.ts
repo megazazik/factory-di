@@ -12,10 +12,7 @@ export type GetValue<Type, Deps extends Dependencies> = (
 // export type ComputeContainerAllDeps<
 // 	Deps extends Dependencies,
 // 	RegisteredDeps extends Record<Key, Container<any, any, any>>
-// > = Deps &
-// 	UnionToIntersection<
-// 		RegisteredDeps[keyof RegisteredDeps][typeof allDepsKey]
-// 	>;
+// > = Deps & RegisteredDeps[keyof RegisteredDeps][typeof allDepsKey]
 export type ComputeContainerAllDeps<
 	Deps extends Dependencies,
 	RegisteredDeps extends Record<Key, Container<any, any, any>>
@@ -24,16 +21,23 @@ export type ComputeContainerAllDeps<
 		RegisteredDeps[keyof RegisteredDeps][typeof allDepsKey]
 	>;
 
+type AllDeps<
+	Deps extends Dependencies,
+	RegisteredDeps extends Record<Key, Container<any, any, any>>
+> = Deps &
+	// RegisteredDeps[keyof RegisteredDeps][typeof allDepsKey];
+	({} extends RegisteredDeps
+		? {}
+		: RegisteredDeps[keyof RegisteredDeps][typeof allDepsKey]);
+
 export class Container<
 	Type,
 	Deps extends Dependencies,
-	RegisteredDeps extends Record<Key, Container<any, any, any>>,
-	AllDeps extends Dependencies = ComputeContainerAllDeps<Deps, RegisteredDeps>
+	RegisteredDeps extends Record<Key, Container<any, any, any>>
 > {
 	[depsKey]: Deps;
 	[registeredDepsKey]: RegisteredDeps;
-	// [allDepsKey]: ComputeContainerAllDeps<Deps, RegisteredDeps>; // AllDeps;
-	[allDepsKey]: AllDeps;
+	[allDepsKey]: AllDeps<Deps, RegisteredDeps>;
 
 	private constructor(
 		private getValue: GetValue<Type, Deps>,
@@ -56,7 +60,7 @@ export class Container<
 	singlton(
 		// ...tokens: Array<keyof AllDeps>
 		// ...tokens: Array<keyof ComputeContainerAllDeps<Deps, RegisteredDeps>>
-		...tokens: Array<keyof this[typeof allDepsKey]>
+		...tokens: Array<keyof UnionToIntersection<this[typeof allDepsKey]>>
 	): Container<Type, Deps, RegisteredDeps> {
 		return new Container(
 			this.getValue,
@@ -69,7 +73,7 @@ export class Container<
 		Type,
 		// ComputeContainerAllDeps<Deps, RegisteredDeps>, // AllDeps,
 		this[typeof allDepsKey],
-		RequiredDeps<Container<Type, Deps, RegisteredDeps>, never>
+		RequiredDeps<this, never>
 	> = ((deps: Partial<Deps> = {}) =>
 		this[createValueSymbol](
 			(k) => (k in deps ? { value: deps[k] } : null),
@@ -171,7 +175,7 @@ export class Container<
 	// 		}
 	// 	>
 	// >;
-	register: Register<Type, Deps, RegisteredDeps, AllDeps> = ((
+	register: Register<Type, Deps, RegisteredDeps, this[typeof allDepsKey]> = ((
 		key: Key | object,
 		container?: Container<any, any, any> | any
 	) => {
@@ -209,7 +213,7 @@ export type Register<
 	<
 		NewDeps extends Partial<
 			// DepsToContainerData<ComputeContainerAllDeps<Deps, RegisteredDeps>>
-			DepsToContainerData<AllDeps>
+			DepsToContainerData<UnionToIntersection<AllDeps>>
 		>
 	>(
 		// register<NewDeps extends Partial<DepsToContainerData<AllDeps>>>(
@@ -220,20 +224,20 @@ export type Register<
 		HumanReadableType<
 			Omit<RegisteredDeps, keyof NewDeps> &
 				MapConstantsToContainers<NewDeps>
-		>,
-		ComputeContainerAllDeps<
-			Deps,
-			HumanReadableType<
-				Omit<RegisteredDeps, keyof NewDeps> &
-					MapConstantsToContainers<NewDeps>
-			>
 		>
+		// ComputeContainerAllDeps<
+		// 	Deps,
+		// 	HumanReadableType<
+		// 		Omit<RegisteredDeps, keyof NewDeps> &
+		// 			MapConstantsToContainers<NewDeps>
+		// 	>
+		// >
 	>;
 	<
 		// K extends keyof ComputeContainerAllDeps<Deps, RegisteredDeps>,
-		K extends keyof AllDeps,
+		K extends keyof UnionToIntersection<AllDeps>,
 		Child extends Container<
-			AllDeps[K],
+			UnionToIntersection<AllDeps>[K],
 			// ComputeContainerAllDeps<Deps, RegisteredDeps>[K],
 			any,
 			any
@@ -246,17 +250,17 @@ export type Register<
 	): Container<
 		Type,
 		Deps,
-		HumanReadableType<Omit<RegisteredDeps, K> & { [KK in K]: Child }>,
-		ComputeContainerAllDeps<
-			Deps,
-			HumanReadableType<Omit<RegisteredDeps, K> & { [KK in K]: Child }>
-		>
+		HumanReadableType<Omit<RegisteredDeps, K> & { [KK in K]: Child }>
+		// ComputeContainerAllDeps<
+		// 	Deps,
+		// 	HumanReadableType<Omit<RegisteredDeps, K> & { [KK in K]: Child }>
+		// >
 	>;
 	<
 		// K extends keyof ComputeContainerAllDeps<Deps, RegisteredDeps>,
 		// Value extends ComputeContainerAllDeps<Deps, RegisteredDeps>[K]
-		K extends keyof AllDeps,
-		Value extends AllDeps[K]
+		K extends keyof UnionToIntersection<AllDeps>,
+		Value extends UnionToIntersection<AllDeps>[K]
 	>(
 		// register<K extends keyof AllDeps, Value extends AllDeps[K]>(
 		key: K,
@@ -268,14 +272,6 @@ export type Register<
 			Omit<RegisteredDeps, K> & {
 				[KK in K]: Container<Value, {}, {}>;
 			}
-		>,
-		ComputeContainerAllDeps<
-			Deps,
-			HumanReadableType<
-				Omit<RegisteredDeps, K> & {
-					[KK in K]: Container<Value, {}, {}>;
-				}
-			>
 		>
 	>;
 };
@@ -311,14 +307,18 @@ export type Resolve<
 > = RequiredDepsTokens | typeof NeverGuardSymbol extends typeof NeverGuardSymbol
 	? {
 			(): MainType;
-			(deps: Partial<Deps> & object): MainType;
+			(deps: Partial<UnionToIntersection<Deps>> & object): MainType;
 	  }
 	: (
 			deps: HumanReadableType<
-				Partial<Omit<Deps, RequiredDepsTokens>> &
-					Pick<Deps, RequiredDepsTokens>
+				Partial<Omit<UnionToIntersection<Deps>, RequiredDepsTokens>> &
+					SafePick<UnionToIntersection<Deps>, RequiredDepsTokens>
 			>
 	  ) => MainType;
+
+type SafePick<T, K extends Key> = {
+	[P in keyof T as P extends K ? P : never]: T[P];
+};
 
 export type RequiredDeps<
 	C extends Container<any, any, any>,
@@ -374,9 +374,6 @@ export type HumanReadableType<T> = T extends infer U
 	: never;
 // export type HumanReadableType<T> = T;
 
-export type AllDependenciesOfContainer<C extends Container<any, any, any>> =
-	C[typeof allDepsKey];
-
 export type DependenciesMap<Params extends object> = {
 	[K in keyof Params]: Key | Container<Params[K], any, any>;
 };
@@ -386,12 +383,7 @@ export type ContainerFromParamsAsObject<
 	T,
 	KeysMap extends DependenciesMap<Params>
 > = KeysMap extends Key // на случай, если передали токен, который соответствует типу первого параметра
-	? Container<
-			T,
-			{ [KK in KeysMap]: Params },
-			{},
-			ComputeContainerAllDeps<{ [KK in KeysMap]: Params }, {}>
-	  >
+	? Container<T, { [KK in KeysMap]: Params }, {}>
 	: Container<
 			T,
 			{
@@ -409,23 +401,5 @@ export type ContainerFromParamsAsObject<
 					: never]: KeysMap[K] extends Container<any, any, any>
 					? KeysMap[K]
 					: never;
-			},
-			ComputeContainerAllDeps<
-				{
-					[K in keyof Params as KeysMap[K] extends Key
-						? KeysMap[K]
-						: K]: Params[K];
-				},
-				{
-					[K in keyof KeysMap as KeysMap[K] extends Container<
-						any,
-						any,
-						any
-					>
-						? K
-						: never]: KeysMap[K] extends Container<any, any, any>
-						? KeysMap[K]
-						: never;
-				}
-			>
+			}
 	  >;

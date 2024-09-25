@@ -6,43 +6,20 @@ declare const cNum: Container<number, { b: boolean }, {}>;
 declare const cStr: Container<string, { n: number }, {}>;
 
 export function allDeps() {
-	expectType<Container<boolean, {}, {}, {}>>(cBool);
+	expectType<Container<boolean, {}, {}>>(cBool);
 
-	expectType<Container<number, { b: boolean }, {}, { b: boolean }>>(cNum);
+	expectType<Container<number, { b: boolean }, {}>>(cNum);
 
-	expectType<
-		Container<
-			string,
-			{ n: number },
-			{ n: typeof cNum },
-			{ n: number } & { b: boolean }
-		>
-	>(cStr.register('n', cNum));
+	expectType<Container<string, { n: number }, { n: typeof cNum }>>(
+		cStr.register('n', cNum)
+	);
 
-	expectType<
-		Container<
-			string,
-			{ n: number },
-			{ n: typeof cNum },
-			{
-				n: number;
-			} & {
-				b: boolean;
-			}
-		>
-	>(cStr.register({ n: cNum }));
+	expectType<Container<string, { n: number }, { n: typeof cNum }>>(
+		cStr.register({ n: cNum })
+	);
 
 	expectType<
-		Container<
-			string,
-			{ n: number },
-			{ n: typeof cNum; b: typeof cBool },
-			{
-				n: number;
-			} & {
-				b: boolean;
-			}
-		>
+		Container<string, { n: number }, { n: typeof cNum; b: typeof cBool }>
 	>(cStr.register('n', cNum).register({ b: cBool }));
 
 	expectType<
@@ -52,9 +29,6 @@ export function allDeps() {
 			{
 				b: typeof cBool;
 				n: Container<number, {}, {}>;
-			},
-			{
-				n: number;
 			}
 		>
 	>(cStr.register({ n: cNum }).register({ b: cBool, n: 123 }));
@@ -67,9 +41,6 @@ export function allDeps() {
 				b: typeof cBool;
 
 				n: Container<number, {}, {}>;
-			},
-			{
-				n: number;
 			}
 		>
 	>(
@@ -91,12 +62,7 @@ export function ofGrandChildrenDeps() {
 				str: typeof cStr;
 				n: typeof cNum;
 				b: Container<boolean, {}, {}>;
-			},
-			{
-				str: string;
-			} & {
-				n: number;
-			} & { b: boolean }
+			}
 		>
 	>(
 		cBool2
@@ -113,12 +79,7 @@ export function ofGrandChildrenDeps() {
 				str: typeof cStr;
 				n: typeof cNum;
 				b: Container<boolean, {}, {}>;
-			},
-			{
-				str: string;
-			} & {
-				n: number;
-			} & { b: boolean }
+			}
 		>
 	>(cBool2.register('str', cStr).register('n', cNum).register('b', cBool));
 
@@ -138,12 +99,7 @@ export function ofGrandChildrenDeps() {
 						>;
 					}
 				>;
-			},
-			{
-				str: string;
-			} & {
-				n: number;
-			} & { b: boolean }
+			}
 		>
 	>(
 		cBool2.register({
@@ -159,8 +115,7 @@ export function ofGrandChildrenDeps() {
 				str: Container<string, {}, {}>;
 				n: Container<number, {}, {}>;
 				b: Container<boolean, {}, {}>;
-			},
-			{ str: string }
+			}
 		>
 	>(
 		cBool2

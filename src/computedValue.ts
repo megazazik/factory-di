@@ -1,6 +1,5 @@
 import { constructorSymbol } from './innerMethods';
 import {
-	ComputeContainerAllDeps,
 	Container,
 	ContainerFromParamsAsObject,
 	DependenciesMap,
@@ -26,11 +25,7 @@ export interface OfComputedValue {
 	): Container<
 		T,
 		HumanReadableType<DepsFromParamsList<NumberKeysOnly<Keys>, Params>>,
-		{},
-		ComputeContainerAllDeps<
-			HumanReadableType<DepsFromParamsList<NumberKeysOnly<Keys>, Params>>,
-			{}
-		>
+		{}
 	>;
 }
 
