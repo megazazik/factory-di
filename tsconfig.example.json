@@ -1,0 +1,22 @@
+{
+	"compilerOptions": {
+		"sourceMap": false,
+		"module": "commonjs",
+		"target": "es2015",
+		"declaration": false,
+		"moduleResolution": "node",
+		"outDir": "./dist/",
+		"lib": ["es2015", "es5", "ES2019.Object"],
+		"jsx": "react",
+		"esModuleInterop": true,
+		"noImplicitAny": true,
+		"noImplicitReturns": true,
+		"noImplicitThis": true,
+		"strictNullChecks": true,
+		"experimentalDecorators": true,
+		"noEmit": true,
+		"skipDefaultLibCheck": true,
+		"skipLibCheck": true
+	},
+	"files": ["example/index.ts"]
+}

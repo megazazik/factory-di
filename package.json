@@ -13,7 +13,8 @@
     "unit-test": "ts-node node_modules/tape/bin/tape ./src/**/*.spec.ts",
     "type-test": "tsd",
     "tape": "ts-node node_modules/tape/bin/tape",
-    "w": "nodemon -e js,jsx,ts,tsx,json --exec npm run"
+    "w": "nodemon -e js,jsx,ts,tsx,json --exec npm run",
+    "perf-test": "tsc -p tsconfig.example.json --extendedDiagnostics --watch"
   },
   "keywords": [
     "di",
