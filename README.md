@@ -12,6 +12,7 @@ This library contains function to create some kind of Dependency Injection Conta
 -   [constant](#constant)
 -   [factory](#factory)
 -   [singleton](#singleton)
+-   [Dynamic imports](#dynamic-imports)
 
 ## Advantages
 
@@ -720,3 +721,48 @@ There are some factors of the `singleton` method behavior.
 -   if you register some dependency container twice it is considered as two independent containers and they create independent instances even if you mark them as singleton
 -   each call of the `resolve` method has its own set of singletons. During each call all singletons receive new instances
 -   if you use the `factory` function to create several instances then each call of the factory reinitializes singletons of all children containers of the factory. If you need some dependency to be a singleton inside all instances created by the factory you should register this dependency and mark it as singleton via the container of the factory or via some parent container
+
+## Dynamic imports
+
+You can use the `awaited` function when you need load some code dynamically.
+`awaited` creates a container for an async function which returns the value of passed to `awaiter` container.
+
+```typescript
+// ./largeModule.ts
+import { Class } from 'factory-di';
+
+export class LargeModule {
+	/** ...a lot of code...  */
+}
+
+// declare container as usually
+export const LargeModuleContainer(LargeModule);
+
+
+// ./app.ts
+import { awaited, Class } from 'factory-di';
+import type { LargeModule } from './largeModule';
+
+class App {
+	largeModule: LargeModule | null = null;
+
+	// declare a function which loads our dynamic dependency
+	constructor(public loadLargeModule: () => Promise<LargeModule>) {}
+
+	async loadModule() {
+		// load dynamic dependency and use it
+		this.largeModule = await this.loadLargeModule();
+	}
+}
+
+const app = Class(App, 'largeModule')
+	.register(
+		'largeModule',
+		// pass to awaited an async function which returns the dependency container
+		awaited(async () => (await import('./largeModule')).LargeModuleContainer )
+	)
+	.resolve();
+
+await app.loadModule();
+
+```

@@ -259,6 +259,36 @@ export type HumanReadableType<T> = T extends infer U
 	? { [K in keyof U]: U[K] }
 	: never;
 // export type HumanReadableType<T> = T;
-
+//
 export type AllDependenciesOfContainer<C extends Container<any, any, any>> =
 	C[typeof allDepsKey];
+
+export type DependenciesMap<Params extends object> = {
+	[K in keyof Params]: Key | Container<Params[K], any, any>;
+};
+
+export type ContainerFromParamsAsObject<
+	Params extends object,
+	T,
+	KeysMap extends DependenciesMap<Params>
+> = KeysMap extends Key // на случай, если передали токен, который соответствует типу первого параметра
+	? Container<T, { [KK in KeysMap]: Params }, {}>
+	: Container<
+			T,
+			{
+				[K in keyof Params as KeysMap[K] extends Key
+					? KeysMap[K]
+					: K]: Params[K];
+			},
+			{
+				[K in keyof KeysMap as KeysMap[K] extends Container<
+					any,
+					any,
+					any
+				>
+					? K
+					: never]: KeysMap[K] extends Container<any, any, any>
+					? KeysMap[K]
+					: never;
+			}
+	  >;
