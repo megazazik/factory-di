@@ -1,3 +1,12 @@
+# [3.1.0](https://github.com/megazazik/factory-di/compare/v3.0.2...v3.1.0) (2024-09-29)
+
+
+### Features
+
+* add dynamic imports support ([03e7903](https://github.com/megazazik/factory-di/commit/03e790306ecb4d13e60141c02af972290477c66b))
+
+
+
 ## [3.0.2](https://github.com/megazazik/factory-di/compare/v3.0.1...v3.0.2) (2024-04-21)
 
 
