@@ -736,8 +736,7 @@ export class LargeModule {
 }
 
 // declare container as usually
-export const LargeModuleContainer(LargeModule);
-
+export const LargeModuleContainer = Class(LargeModule);
 
 // ./app.ts
 import { awaited, Class } from 'factory-di';
@@ -759,10 +758,11 @@ const app = Class(App, 'largeModule')
 	.register(
 		'largeModule',
 		// pass to awaited an async function which returns the dependency container
-		awaited(async () => (await import('./largeModule')).LargeModuleContainer )
+		awaited(
+			async () => (await import('./largeModule')).LargeModuleContainer
+		)
 	)
 	.resolve();
 
 await app.loadModule();
-
 ```
