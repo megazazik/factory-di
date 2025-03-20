@@ -1,3 +1,12 @@
+# [4.0.0-proxy-beta.1](https://github.com/megazazik/factory-di/compare/v4.0.0-proxy-beta...v4.0.0-proxy-beta.1) (2025-03-20)
+
+
+### Bug Fixes
+
+* add better error description ([f0ea8c2](https://github.com/megazazik/factory-di/commit/f0ea8c26372ac00f9402943c2f2b072d9da0f86b))
+
+
+
 # [4.0.0-proxy-beta](https://github.com/megazazik/factory-di/compare/v3.1.0...v4.0.0-proxy-beta) (2025-03-20)
 
 
