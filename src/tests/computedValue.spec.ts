@@ -181,7 +181,7 @@ tape('ofComputedValue. Nested. Object. No tokens', (t) => {
 				{ pnStr: constant('nStrValue') }
 			)
 		)
-		.register('n2', true);
+		.register('n2', () => true);
 
 	t.deepEqual(container.resolve(), {
 		value: 154,

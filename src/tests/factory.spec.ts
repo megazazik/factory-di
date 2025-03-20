@@ -71,12 +71,12 @@ tape('ofFactory. From container. Param list', (t) => {
 	const child1 = computedValue((v: string) => ({ v }), 'vToken');
 
 	const factoryMethod1 = factory(child1)
-		.register('vToken', 'vValue1')
+		.register('vToken', constant('vValue1'))
 		.resolve();
 	t.deepEqual(factoryMethod1(), { v: 'vValue1' });
 
 	const factoryMethod2 = factory(
-		child1.register('vToken', 'vValue1')
+		child1.register('vToken', () => 'vValue1')
 	).resolve();
 	t.deepEqual(factoryMethod2(), { v: 'vValue1' });
 
@@ -96,7 +96,7 @@ tape('ofFactory. From container. Param list', (t) => {
 	t.deepEqual(factoryMethod4(), { v: 'vValue1', v2: 321 });
 
 	const factoryMethod5 = factory(
-		child2.register({ vToken: 'vValue2' })
+		child2.register({ vToken: () => 'vValue2' })
 	).resolve({
 		v2Token: 456,
 	});
@@ -109,19 +109,19 @@ tape('ofFactory. From container. Param list', (t) => {
 
 	const factoryMethod7 = factory(
 		child2.register({
-			v2Token: 458,
+			v2Token: () => 458,
 		}),
 		'vToken'
 	)
 		.register({
-			v2Token: 459,
+			v2Token: () => 459,
 		})
 		.resolve();
 	t.deepEqual(factoryMethod7('vValue4'), { v: 'vValue4', v2: 459 });
 
 	const factoryMethod8 = factory(
 		child2.register({
-			v2Token: 458,
+			v2Token: () => 458,
 		}),
 		'vToken',
 		'v2Token'
@@ -153,12 +153,12 @@ tape('ofFactory. From container. Param object', (t) => {
 
 	const factoryMethod7 = factory(
 		child2.register({
-			v2Token: 458,
+			v2Token: () => 458,
 		}),
 		{ vParam: 'vToken' }
 	)
 		.register({
-			v2Token: 459,
+			v2Token: () => 459,
 		})
 		.resolve();
 	t.deepEqual(factoryMethod7({ vParam: 'vValue4' }), {
@@ -168,7 +168,7 @@ tape('ofFactory. From container. Param object', (t) => {
 
 	const factoryMethod8 = factory(
 		child2.register({
-			v2Token: 458,
+			v2Token: () => 458,
 		}),
 		{
 			vParam: 'vToken',

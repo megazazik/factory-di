@@ -108,7 +108,10 @@ export class Container<
 	}
 
 	register<NewDeps extends Partial<DepsToContainerData<AllDeps>>>(
-		deps: NewDeps
+		deps: NewDeps &
+			(OnlyExistedKeys<NewDeps, keyof AllDeps> extends true
+				? {}
+				: 'Deps should contain only existed keys')
 	): Container<
 		Type,
 		Deps,
@@ -128,19 +131,34 @@ export class Container<
 		Deps,
 		HumanReadableType<Omit<RegisteredDeps, K> & { [KK in K]: Child }>
 	>;
-	register<K extends keyof AllDeps, Value extends AllDeps[K]>(
+	register<K extends keyof AllDeps>(
 		key: K,
-		child: Value
+		child: () => AllDeps[K]
 	): Container<
 		Type,
 		Deps,
 		HumanReadableType<
 			Omit<RegisteredDeps, K> & {
-				[KK in K]: Container<Value, {}, {}>;
+				[KK in K]: Container<AllDeps[K], {}, {}>;
 			}
 		>
 	>;
-	register(key: Key | object, container?: Container<any, any, any> | any) {
+	register<K extends keyof AllDeps, Params extends object>(
+		key: K,
+		child: (params: Params) => AllDeps[K]
+	): Container<
+		Type,
+		Deps,
+		HumanReadableType<
+			Omit<RegisteredDeps, K> & {
+				[KK in K]: Container<AllDeps[K], Params, {}>;
+			}
+		>
+	>;
+	register(
+		key: Key | object,
+		container?: Container<any, any, any> | ((...args: any[]) => any)
+	) {
 		return new Container(
 			this.getValue,
 			{
@@ -151,20 +169,24 @@ export class Container<
 								depKey,
 								(key as any)[depKey] instanceof Container
 									? (key as any)[depKey]
-									: constant((key as any)[depKey]),
+									: fn((key as any)[depKey]),
 							])
 					  )
 					: {
 							[key]:
 								container instanceof Container
 									? container
-									: constant(container),
+									: fn(container!),
 					  }),
 			},
 			this.singltonTokens
 		) as any;
 	}
 }
+
+export type OnlyExistedKeys<T extends object, K> = keyof T extends K
+	? true
+	: false;
 
 export function getAllKeys(obj: any): Key[] {
 	const keys: Key[] = Object.keys(obj);
@@ -177,11 +199,18 @@ export function getAllKeys(obj: any): Key[] {
 export type MapConstantsToContainers<T extends Record<Key, any>> = {
 	[K in keyof T]: T[K] extends Container<any, any, any>
 		? T[K]
-		: Container<T[K], {}, {}>;
+		: T[K] extends () => infer D
+		? Container<D, {}, {}>
+		: T[K] extends (p: infer P) => infer D
+		? Container<D, P extends Dependencies ? P : {}, {}>
+		: never;
 };
 
 export type DepsToContainerData<Deps> = {
-	[K in keyof Deps]: Container<Deps[K], any, any> | Deps[K];
+	[K in keyof Deps]:
+		| Container<Deps[K], any, any>
+		| (() => Deps[K])
+		| ((params: object) => Deps[K]);
 };
 
 export function constant<T>(value: T) {
@@ -292,3 +321,87 @@ export type ContainerFromParamsAsObject<
 					: never;
 			}
 	  >;
+
+export interface OfFunction {
+	<T>(getValue: () => T): Container<T, {}, {}>;
+
+	<T, Params extends object>(create: (params: Params) => T): Container<
+		T,
+		Params,
+		{}
+	>;
+
+	<Params extends object, T, const KeysMap extends DependenciesMap<Params>>(
+		c: (params: Params) => T,
+		keys: KeysMap
+	): ContainerFromParamsAsObject<Params, T, KeysMap>;
+
+	<Params extends [...any[]], T, Keys extends KeysTuple<Params>>(
+		c: (...args: Params) => T,
+		...keys: Keys
+	): Container<
+		T,
+		HumanReadableType<DepsFromParamsList<NumberKeysOnly<Keys>, Params>>,
+		{}
+	>;
+}
+
+export const fn: OfFunction = <T>(
+	getValue: (...args: any[]) => T,
+	...argNames: (string | object)[]
+) => {
+	if (typeof argNames[0] === 'object') {
+		const registeredDeps = {} as any;
+		Object.entries(argNames[0]).forEach(([key, value]) => {
+			if (typeof value === 'object') {
+				registeredDeps[key] = value;
+			}
+		});
+
+		return Container[constructorSymbol](
+			(resolve: any) =>
+				getValue(
+					getAllKeys(argNames[0]).reduce((prev, key) => {
+						const value = (argNames[0] as any)[key];
+						return Object.assign(prev, {
+							[key]:
+								resolve(typeof value === 'object' ? key : value)
+									?.value ?? undefined,
+						});
+					}, {})
+				),
+			registeredDeps
+		) as Container<T, {}, {}>;
+	}
+
+	if (argNames.length > 0 || getValue.length === 0) {
+		return Container[constructorSymbol](
+			(resolve: any) =>
+				getValue(
+					...argNames.map((k) => resolve(k)?.value ?? undefined)
+				),
+			{}
+		) as Container<T, {}, {}>;
+	}
+
+	return Container[constructorSymbol]((resolve: any) => {
+		const depsMap: Record<Key, any> = {};
+
+		return getValue(
+			new Proxy(
+				{},
+				{
+					get(_, prop) {
+						if (prop in depsMap) {
+							return depsMap[prop];
+						}
+
+						const dep = resolve(prop)?.value ?? undefined;
+						depsMap[prop] = dep;
+						return dep;
+					},
+				}
+			)
+		);
+	}, {}) as Container<T, {}, {}>;
+};

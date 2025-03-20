@@ -1,5 +1,5 @@
 import tape from 'tape';
-import { Class } from '..';
+import { Class, constant } from '..';
 
 class C1 {
 	constructor(public p1: number) {}
@@ -16,8 +16,8 @@ const containerC2 = Class(C2, 'c2Dep1', 'c2Dep2');
 tape('ofConstant1', (t) => {
 	const result = containerC2
 		.register('c2Dep1', containerC1)
-		.register('c1Dep1', 123)
-		.register('c2Dep2', 'strvalue')
+		.register('c1Dep1', () => 123)
+		.register('c2Dep2', constant('strvalue'))
 		.resolve();
 
 	t.equal(result.p2, 'strvalue');
@@ -28,8 +28,11 @@ tape('ofConstant1', (t) => {
 
 tape('ofConstant2', (t) => {
 	const result = containerC2
-		.register('c2Dep1', containerC1.register('c1Dep1', 123))
-		.register('c2Dep2', 'strvalue')
+		.register(
+			'c2Dep1',
+			containerC1.register('c1Dep1', () => 123)
+		)
+		.register('c2Dep2', constant('strvalue'))
 		.resolve();
 
 	t.equal(result.p2, 'strvalue');
@@ -42,8 +45,8 @@ tape('ofConstant3', (t) => {
 	const result = containerC2
 		.register('c2Dep1', containerC1)
 		.register({
-			c1Dep1: 123,
-			c2Dep2: 'strvalue',
+			c1Dep1: constant(123),
+			c2Dep2: () => 'strvalue',
 		})
 		.resolve();
 
@@ -55,8 +58,8 @@ tape('ofConstant3', (t) => {
 
 tape('ofConstant4', (t) => {
 	const result = containerC2
-		.register('c2Dep1', containerC1.register({ c1Dep1: 123 }))
-		.register({ c2Dep2: 'strvalue' })
+		.register('c2Dep1', containerC1.register({ c1Dep1: () => 123 }))
+		.register({ c2Dep2: () => 'strvalue' })
 		.resolve();
 
 	t.equal(result.p2, 'strvalue');

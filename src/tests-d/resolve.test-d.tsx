@@ -1,5 +1,5 @@
 import { expectType, expectError, expectAssignable } from 'tsd';
-import { computedValue, Resolve } from '..';
+import { computedValue, constant, Resolve } from '..';
 
 declare const v: any;
 
@@ -75,15 +75,15 @@ export function ofContainerResolve() {
 
 	expectType<Resolve<boolean, { num: number; str: string }, never>>(
 		computedValue((n: number, s: string) => true, 'num', 'str').register({
-			num: 123,
-			str: 'dgs',
+			num: () => 123,
+			str: constant('dgs'),
 		}).resolve
 	);
 
 	expectType<Resolve<boolean, { num: number; str: string }, 'str'>>(
 		computedValue((n: number, s: string) => true, 'num', 'str').register(
 			'num',
-			123
+			() => 123
 		).resolve
 	);
 
@@ -97,13 +97,16 @@ export function ofContainerResolve() {
 				'num',
 				computedValue((s: string) => s.length, 'str')
 			)
-			.register('str', 'val').resolve
+			.register('str', constant('val')).resolve
 	);
 
 	expectType<Resolve<boolean, { num: number } & { str: string }, never>>(
 		computedValue((n: number) => true, 'num').register(
 			'num',
-			computedValue((s: string) => s.length, 'str').register('str', 'val')
+			computedValue((s: string) => s.length, 'str').register(
+				'str',
+				() => 'val'
+			)
 		).resolve
 	);
 
@@ -145,7 +148,7 @@ export function ofContainerResolve() {
 					computedValue((b: boolean) => 'sdd', 'bool')
 				)
 			)
-			.register({ bool: true }).resolve
+			.register({ bool: () => true }).resolve
 	);
 }
 
@@ -171,10 +174,13 @@ export function ofContainerResolveManyChildren() {
 		>
 	>(
 		computedValue((n: number, s: string) => true, 'num', 'str').register({
-			num: computedValue((n: number) => n, 'num2').register('num2', 123),
+			num: computedValue((n: number) => n, 'num2').register(
+				'num2',
+				() => 123
+			),
 			str: computedValue((s: string) => s, 'str2').register(
 				'str2',
-				'sdf'
+				() => 'sdf'
 			),
 		}).resolve
 	);
@@ -191,8 +197,8 @@ export function ofContainerResolveManyChildren() {
 				num: computedValue((n: number) => n, 'num2'),
 				str: computedValue((s: string) => s, 'str2'),
 			})
-			.register('num2', 123)
-			.register('str2', 'sdf').resolve
+			.register('num2', () => 123)
+			.register('str2', constant('sdf')).resolve
 	);
 
 	expectType<
@@ -203,7 +209,7 @@ export function ofContainerResolveManyChildren() {
 				num: computedValue((n: number) => n, 'num2'),
 				str: computedValue((s: number) => String(s), 'num2'),
 			})
-			.register('num2', 123).resolve
+			.register('num2', () => 123).resolve
 	);
 
 	expectType<
@@ -227,7 +233,10 @@ export function ofContainerResolveManyChildren() {
 		>
 	>(
 		computedValue((n: number, s: string) => true, 'num', 'str').register({
-			num: computedValue((n: number) => n, 'num2').register('num2', 123),
+			num: computedValue((n: number) => n, 'num2').register(
+				'num2',
+				() => 123
+			),
 			str: computedValue((s: number) => String(s), 'num2'),
 		}).resolve
 	);
@@ -236,10 +245,13 @@ export function ofContainerResolveManyChildren() {
 		Resolve<boolean, { num: number; str: string } & { num2: number }, never>
 	>(
 		computedValue((n: number, s: string) => true, 'num', 'str').register({
-			num: computedValue((n: number) => n, 'num2').register('num2', 123),
+			num: computedValue((n: number) => n, 'num2').register(
+				'num2',
+				() => 123
+			),
 			str: computedValue((s: number) => String(s), 'num2').register(
 				'num2',
-				123
+				() => 123
 			),
 		}).resolve
 	);
@@ -257,7 +269,10 @@ export function ofContainerResolveManyChildren() {
 		Resolve<boolean, { num: number; str: string } & { p2: never }, 'p2'>
 	>(
 		computedValue((n: number, s: string) => true, 'num', 'str').register({
-			num: computedValue((n: number) => n, 'p2').register('p2', 123),
+			num: computedValue((n: number) => n, 'p2').register(
+				'p2',
+				() => 123
+			),
 			str: computedValue((s: string) => s, 'p2'),
 		}).resolve
 	);
@@ -270,8 +285,14 @@ export function ofContainerResolveManyChildren() {
 		>
 	>(
 		computedValue((n: number, s: string) => true, 'num', 'str').register({
-			num: computedValue((n: number) => n, 'p2').register('p2', 123),
-			str: computedValue((s: string) => s, 'p2').register('p2', 'sdfsdf'),
+			num: computedValue((n: number) => n, 'p2').register(
+				'p2',
+				() => 123
+			),
+			str: computedValue((s: string) => s, 'p2').register(
+				'p2',
+				() => 'sdfsdf'
+			),
 		}).resolve
 	);
 
@@ -286,7 +307,7 @@ export function ofContainerResolveManyChildren() {
 			.register({
 				num: computedValue((n: number) => n, 'p2'),
 			})
-			.register('num', 123).resolve
+			.register('num', () => 123).resolve
 	);
 
 	expectType<
@@ -302,6 +323,6 @@ export function ofContainerResolveManyChildren() {
 					num2: computedValue((n: number) => n, 'num3'),
 				}),
 			})
-			.register('num2', 123).resolve
+			.register('num2', () => 123).resolve
 	);
 }

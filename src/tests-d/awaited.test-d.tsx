@@ -1,13 +1,5 @@
-import { expectError, expectType } from 'tsd';
-import {
-	Container,
-	constant,
-	FactoryResolve,
-	factory,
-	awaited,
-	Resolve,
-	computedValue,
-} from '..';
+import { expectType } from 'tsd';
+import { Container, constant, awaited, Resolve, computedValue } from '..';
 
 export function ofAwaitedWithoutDeps() {
 	expectType<Container<() => Promise<string>, {}, {}>>(
@@ -30,7 +22,7 @@ export function ofAwaitedContainerParamObject() {
 
 	const child2 = computedValue((v: string) => ({ v }), 'vToken').register(
 		'vToken',
-		'value' as string
+		constant('value' as string)
 	);
 	expectType<
 		Container<

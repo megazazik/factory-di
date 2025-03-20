@@ -26,7 +26,7 @@ tape('ofFactory. With deps. Via child', async (t) => {
 	const child = computedValue(
 		(v: string) => ({ value: v }),
 		'strValue'
-	).register('strValue', '345');
+	).register('strValue', () => '345');
 	const awaitedChild = awaited(async () => child);
 
 	t.deepEqual(await awaitedChild.resolve()(), {
@@ -38,7 +38,10 @@ tape('ofFactory. With deps. Via child', async (t) => {
 
 tape('ofFactory. With deps. Via awaited', async (t) => {
 	const child = computedValue((v: string) => ({ value: v }), 'strValue');
-	const awaitedChild = awaited(async () => child).register('strValue', '321');
+	const awaitedChild = awaited(async () => child).register(
+		'strValue',
+		() => '321'
+	);
 
 	t.deepEqual(await awaitedChild.resolve()(), {
 		value: '321',
@@ -53,8 +56,8 @@ tape('ofFactory. With deps. Mixed', async (t) => {
 		'dV1',
 		'dV2',
 		'dV3'
-	).register('dV1', 'str');
-	const awaitedChild = awaited(async () => child).register('dV2', 100);
+	).register('dV1', () => 'str');
+	const awaitedChild = awaited(async () => child).register('dV2', () => 100);
 
 	t.deepEqual(await awaitedChild.resolve({ dV3: false })(), {
 		v1: 'str',

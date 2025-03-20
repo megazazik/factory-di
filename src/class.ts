@@ -13,7 +13,11 @@ import {
 
 export interface OfClass {
 	<T>(c: { new (): T }): Container<T, {}, {}>;
-
+	<T, Params extends object>(c: { new (params: Params): T }): Container<
+		T,
+		Params,
+		{}
+	>;
 	<Params extends object, T, const KeysMap extends DependenciesMap<Params>>(
 		c: { new (args: Params): T },
 		keys: KeysMap
@@ -54,11 +58,33 @@ export const Class: OfClass = (Constructor: any, ...argNames: string[]) => {
 		);
 	}
 
-	return Container[constructorSymbol](
-		(resolve) =>
-			new Constructor(
-				...argNames.map((k) => resolve(k)?.value ?? undefined)
-			),
-		{}
-	);
+	if (argNames.length > 0 || Constructor.length === 0) {
+		return Container[constructorSymbol](
+			(resolve) =>
+				new Constructor(
+					...argNames.map((k) => resolve(k)?.value ?? undefined)
+				),
+			{}
+		);
+	}
+	return Container[constructorSymbol]((resolve: any) => {
+		const depsMap: Record<Key, any> = {};
+
+		return new Constructor(
+			new Proxy(
+				{},
+				{
+					get(_, prop) {
+						if (prop in depsMap) {
+							return depsMap[prop];
+						}
+
+						const dep = resolve(prop)?.value ?? undefined;
+						depsMap[prop] = dep;
+						return dep;
+					},
+				}
+			)
+		);
+	}, {});
 };

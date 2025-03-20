@@ -120,7 +120,12 @@ export function ofFactoryContainerParamList() {
 				v2Token: Container<never, {}, {}>;
 			}
 		>
-	>(factory(child4.register('vToken', 'vValue' as string), 'v2Token'));
+	>(
+		factory(
+			child4.register('vToken', () => 'vValue' as string),
+			'v2Token'
+		)
+	);
 
 	expectType<
 		Container<
@@ -134,8 +139,8 @@ export function ofFactoryContainerParamList() {
 	>(
 		factory(
 			child4
-				.register('vToken', 'vValue' as string)
-				.register('v2Token', 12 as number),
+				.register('vToken', () => 'vValue' as string)
+				.register('v2Token', () => 12 as number),
 			'v2Token'
 		)
 	);
@@ -198,9 +203,12 @@ export function ofFactoryContainerParamObject() {
 			}
 		>
 	>(
-		factory(child4.register('vToken', 'vValue' as string), {
-			param: 'v2Token',
-		})
+		factory(
+			child4.register('vToken', () => 'vValue' as string),
+			{
+				param: 'v2Token',
+			}
+		)
 	);
 	expectType<
 		Container<
@@ -214,8 +222,8 @@ export function ofFactoryContainerParamObject() {
 	>(
 		factory(
 			child4
-				.register('vToken', 'vValue' as string)
-				.register('v2Token', 12 as number),
+				.register('vToken', () => 'vValue' as string)
+				.register('v2Token', () => 12 as number),
 			{ param: 'v2Token' }
 		)
 	);

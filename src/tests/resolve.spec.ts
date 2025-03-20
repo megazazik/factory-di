@@ -24,7 +24,7 @@ class C2 {
 }
 
 tape('Resolve with params. Override params', (t) => {
-	const container = Class(C2, 'c2c1', 'c2p2').register('c2p2', '789');
+	const container = Class(C2, 'c2c1', 'c2p2').register('c2p2', () => '789');
 
 	const instance = container.resolve({
 		c2c1: new C1(123),

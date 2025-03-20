@@ -1,5 +1,5 @@
 import { expectType, expectError } from 'tsd';
-import { Container } from '..';
+import { constant, Container } from '..';
 
 declare const cBool: Container<boolean, {}, {}>;
 declare const cNum: Container<number, { b: boolean }, {}>;
@@ -57,7 +57,7 @@ export function allDeps() {
 				n: number;
 			}
 		>
-	>(cStr.register({ n: cNum }).register({ b: cBool, n: 123 }));
+	>(cStr.register({ n: cNum }).register({ b: cBool, n: () => 123 }));
 
 	expectType<
 		Container<
@@ -76,7 +76,7 @@ export function allDeps() {
 		cStr
 			.register({ n: cNum })
 			.register({ b: cBool })
-			.register('n', 123 as number)
+			.register('n', () => 123 as number)
 	);
 }
 
@@ -167,17 +167,16 @@ export function ofGrandChildrenDeps() {
 			.register('str', cStr)
 			.register('n', cNum)
 			.register('b', cBool)
-			.register('n', 123 as number)
-			.register('str', '123' as string)
+			.register('n', () => 123 as number)
+			.register('str', constant('123' as string))
 	);
 }
 
 export function ofResolveErrors() {
-	expectError(cBool2.register({ unknown: '32' }));
-	expectError(cBool2.register({ str: 32 }));
-	expectError(cBool2.register({ str: cNum }));
-	expectError(cBool2.register({ unknown: cStr }));
-
-	/** @todo поправить, чтобы здесь была ошибка */
-	// expectError(cBool2.register({ str: cStr, unknown: 123 }));
+	expectError(cBool2.register({ unknown: () => '32' }));
+	expectError(cBool2.register({ str: () => 32 }));
+	expectError(cBool2.register({ str: () => cNum }));
+	expectError(cBool2.register({ unknown: () => cStr }));
+	expectError(cBool2.register({ str: '123' as string }));
+	expectError(cBool2.register({ str: cStr, unknown: 123 }));
 }
