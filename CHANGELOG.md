@@ -1,3 +1,18 @@
+# [4.0.0-proxy-beta](https://github.com/megazazik/factory-di/compare/v3.1.0...v4.0.0-proxy-beta) (2025-03-20)
+
+
+### Features
+
+* auto detect dependencies via proxy ([bd9e3f2](https://github.com/megazazik/factory-di/commit/bd9e3f26ef363ff5b9e2ae80cc594a5285534e83))
+
+
+### BREAKING CHANGES
+
+* the register method now receives functions which will be transformed to container
+with proxy instead of dependencies as constants
+
+
+
 # [3.1.0](https://github.com/megazazik/factory-di/compare/v3.0.2...v3.1.0) (2024-09-29)
 
 
