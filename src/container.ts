@@ -111,7 +111,9 @@ export class Container<
 		deps: NewDeps &
 			(OnlyExistedKeys<NewDeps, keyof AllDeps> extends true
 				? {}
-				: 'Deps should contain only existed keys')
+				:
+						| 'Deps contain not existed keys: '
+						| Exclude<keyof NewDeps, keyof AllDeps>)
 	): Container<
 		Type,
 		Deps,
