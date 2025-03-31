@@ -199,8 +199,7 @@ tape(
 			.register({
 				c2: Class(C2, 'c1', 'p2').register({
 					p2: constant('p2Value'),
-					c1: Class(C1, 'p1'),
-					p1: constant(321),
+					c1: Class(C1, 'p1').register({ p1: constant(321) }),
 				}),
 			});
 

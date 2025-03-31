@@ -108,7 +108,12 @@ export class Container<
 	}
 
 	register<NewDeps extends Partial<DepsToContainerData<AllDeps>>>(
-		deps: NewDeps
+		deps: NewDeps &
+			(OnlyExistedKeys<NewDeps, keyof AllDeps> extends true
+				? {}
+				:
+						| 'Deps contain not existed keys: '
+						| Exclude<keyof NewDeps, keyof AllDeps>)
 	): Container<
 		Type,
 		Deps,
@@ -164,6 +169,57 @@ export class Container<
 			this.singltonTokens
 		) as any;
 	}
+
+	registerFns<NewDeps extends Partial<DepsToFnContainerData<AllDeps>>>(
+		deps: NewDeps &
+			(OnlyExistedKeys<NewDeps, keyof AllDeps> extends true
+				? {}
+				:
+						| 'Deps contain not existed keys: '
+						| Exclude<keyof NewDeps, keyof AllDeps>)
+	): Container<
+		Type,
+		Deps,
+		HumanReadableType<
+			Omit<RegisteredDeps, keyof NewDeps> & MapFnsToContainers<NewDeps>
+		>
+	> {
+		const convertDeps = Object.fromEntries(
+			getAllKeys(deps).map((depKey) => [
+				depKey,
+				deps[depKey] instanceof Container
+					? deps[depKey]
+					: fn(deps[depKey] as any),
+			])
+		);
+		return this.register(convertDeps as any);
+	}
+
+	registerClasses<NewDeps extends Partial<DepsToClassContainerData<AllDeps>>>(
+		deps: NewDeps &
+			(OnlyExistedKeys<NewDeps, keyof AllDeps> extends true
+				? {}
+				:
+						| 'Deps contain not existed keys: '
+						| Exclude<keyof NewDeps, keyof AllDeps>)
+	): Container<
+		Type,
+		Deps,
+		HumanReadableType<
+			Omit<RegisteredDeps, keyof NewDeps> &
+				MapClassesToContainers<NewDeps>
+		>
+	> {
+		const convertDeps = Object.fromEntries(
+			getAllKeys(deps).map((depKey) => [
+				depKey,
+				deps[depKey] instanceof Container
+					? deps[depKey]
+					: Class(deps[depKey] as any),
+			])
+		);
+		return this.register(convertDeps as any);
+	}
 }
 
 export function getAllKeys(obj: any): Key[] {
@@ -180,9 +236,47 @@ export type MapConstantsToContainers<T extends Record<Key, any>> = {
 		: Container<T[K], {}, {}>;
 };
 
+export type MapFnsToContainers<T extends Record<Key, any>> = {
+	[K in keyof T]: T[K] extends Container<any, any, any>
+		? T[K]
+		: T[K] extends () => infer D
+		? Container<D, {}, {}>
+		: T[K] extends (p: infer P) => infer D
+		? Container<D, P extends Dependencies ? P : {}, {}>
+		: never;
+};
+
+export type MapClassesToContainers<T extends Record<Key, any>> = {
+	[K in keyof T]: T[K] extends Container<any, any, any>
+		? T[K]
+		: T[K] extends new () => infer D
+		? Container<D, {}, {}>
+		: T[K] extends new (p: infer P) => infer D
+		? Container<D, P extends Dependencies ? P : {}, {}>
+		: never;
+};
+
 export type DepsToContainerData<Deps> = {
 	[K in keyof Deps]: Container<Deps[K], any, any> | Deps[K];
 };
+
+export type DepsToFnContainerData<Deps> = {
+	[K in keyof Deps]:
+		| Container<Deps[K], any, any>
+		| (() => Deps[K])
+		| ((deps: object) => Deps[K]);
+};
+
+export type DepsToClassContainerData<Deps> = {
+	[K in keyof Deps]:
+		| Container<Deps[K], any, any>
+		| (new () => Deps[K])
+		| (new (deps: object) => Deps[K]);
+};
+
+export type OnlyExistedKeys<T extends object, K> = keyof T extends K
+	? true
+	: false;
 
 export function constant<T>(value: T) {
 	return Container[constructorSymbol]<T, {}, {}>(() => value, {});
@@ -292,3 +386,165 @@ export type ContainerFromParamsAsObject<
 					: never;
 			}
 	  >;
+
+export interface OfFunction {
+	<T>(getValue: () => T): Container<T, {}, {}>;
+
+	<T, Params extends object>(create: (params: Params) => T): Container<
+		T,
+		Params,
+		{}
+	>;
+
+	<Params extends object, T, const KeysMap extends DependenciesMap<Params>>(
+		c: (params: Params) => T,
+		keys: KeysMap
+	): ContainerFromParamsAsObject<Params, T, KeysMap>;
+
+	<Params extends [...any[]], T, Keys extends KeysTuple<Params>>(
+		c: (...args: Params) => T,
+		...keys: Keys
+	): Container<
+		T,
+		HumanReadableType<DepsFromParamsList<NumberKeysOnly<Keys>, Params>>,
+		{}
+	>;
+}
+
+export const fn: OfFunction = <T>(
+	getValue: (...args: any[]) => T,
+	...argNames: (string | object)[]
+) => {
+	if (typeof argNames[0] === 'object') {
+		const registeredDeps = {} as any;
+		Object.entries(argNames[0]).forEach(([key, value]) => {
+			if (typeof value === 'object') {
+				registeredDeps[key] = value;
+			}
+		});
+
+		return Container[constructorSymbol](
+			(resolve: any) =>
+				getValue(
+					getAllKeys(argNames[0]).reduce((prev, key) => {
+						const value = (argNames[0] as any)[key];
+						return Object.assign(prev, {
+							[key]:
+								resolve(typeof value === 'object' ? key : value)
+									?.value ?? undefined,
+						});
+					}, {})
+				),
+			registeredDeps
+		) as Container<T, {}, {}>;
+	}
+
+	if (argNames.length > 0 || getValue.length === 0) {
+		return Container[constructorSymbol](
+			(resolve: any) =>
+				getValue(
+					...argNames.map((k) => resolve(k)?.value ?? undefined)
+				),
+			{}
+		) as Container<T, {}, {}>;
+	}
+
+	return Container[constructorSymbol]((resolve: any) => {
+		const depsMap: Record<Key, any> = {};
+
+		return getValue(
+			new Proxy(
+				{},
+				{
+					get(_, prop) {
+						if (prop in depsMap) {
+							return depsMap[prop];
+						}
+
+						const dep = resolve(prop)?.value ?? undefined;
+						depsMap[prop] = dep;
+						return dep;
+					},
+				}
+			)
+		);
+	}, {}) as Container<T, {}, {}>;
+};
+
+export interface OfClass {
+	<T>(c: { new (): T }): Container<T, {}, {}>;
+	<T, Params extends object>(c: { new (params: Params): T }): Container<
+		T,
+		Params,
+		{}
+	>;
+	<Params extends object, T, const KeysMap extends DependenciesMap<Params>>(
+		c: { new (args: Params): T },
+		keys: KeysMap
+	): ContainerFromParamsAsObject<Params, T, KeysMap>;
+
+	<Params extends [...any[]], T, Keys extends KeysTuple<Params>>(
+		c: { new (...args: Params): T },
+		...keys: Keys
+	): Container<
+		T,
+		HumanReadableType<DepsFromParamsList<NumberKeysOnly<Keys>, Params>>,
+		{}
+	>;
+}
+
+export const Class: OfClass = (Constructor: any, ...argNames: string[]) => {
+	if (typeof argNames[0] === 'object') {
+		const registeredDeps = {} as any;
+		Object.entries(argNames[0]).forEach(([key, value]) => {
+			if (typeof value === 'object') {
+				registeredDeps[key] = value;
+			}
+		});
+
+		return Container[constructorSymbol](
+			(resolve: any) =>
+				new Constructor(
+					getAllKeys(argNames[0]).reduce((prev, key) => {
+						const value = (argNames[0] as any)[key];
+						return Object.assign(prev, {
+							[key]:
+								resolve(typeof value === 'object' ? key : value)
+									?.value ?? undefined,
+						});
+					}, {})
+				),
+			registeredDeps
+		);
+	}
+
+	if (argNames.length > 0 || Constructor.length === 0) {
+		return Container[constructorSymbol](
+			(resolve) =>
+				new Constructor(
+					...argNames.map((k) => resolve(k)?.value ?? undefined)
+				),
+			{}
+		);
+	}
+	return Container[constructorSymbol]((resolve: any) => {
+		const depsMap: Record<Key, any> = {};
+
+		return new Constructor(
+			new Proxy(
+				{},
+				{
+					get(_, prop) {
+						if (prop in depsMap) {
+							return depsMap[prop];
+						}
+
+						const dep = resolve(prop)?.value ?? undefined;
+						depsMap[prop] = dep;
+						return dep;
+					},
+				}
+			)
+		);
+	}, {});
+};

@@ -177,7 +177,5 @@ export function ofResolveErrors() {
 	expectError(cBool2.register({ str: 32 }));
 	expectError(cBool2.register({ str: cNum }));
 	expectError(cBool2.register({ unknown: cStr }));
-
-	/** @todo поправить, чтобы здесь была ошибка */
-	// expectError(cBool2.register({ str: cStr, unknown: 123 }));
+	expectError(cBool2.register({ str: cStr, unknown: 123 }));
 }
