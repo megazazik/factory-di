@@ -172,6 +172,7 @@ export class Container<
 
 	registerFns<NewDeps extends Partial<DepsToFnContainerData<AllDeps>>>(
 		deps: NewDeps &
+			CheckFnsParams<NewDeps> &
 			(OnlyExistedKeys<NewDeps, keyof AllDeps> extends true
 				? {}
 				:
@@ -197,6 +198,7 @@ export class Container<
 
 	registerClasses<NewDeps extends Partial<DepsToClassContainerData<AllDeps>>>(
 		deps: NewDeps &
+			CheckClassesParams<NewDeps> &
 			(OnlyExistedKeys<NewDeps, keyof AllDeps> extends true
 				? {}
 				:
@@ -260,18 +262,38 @@ export type DepsToContainerData<Deps> = {
 	[K in keyof Deps]: Container<Deps[K], any, any> | Deps[K];
 };
 
+export type CheckFnsParams<T extends object> = {
+	[K in keyof T]: T[K] extends Container<any, any, any> | (() => any)
+		? T[K]
+		: T[K] extends (p: infer P) => any
+		? P extends object
+			? T[K]
+			: 'parameter of function must be an object'
+		: 'parameter of function must be an object';
+};
+
+export type CheckClassesParams<T extends object> = {
+	[K in keyof T]: T[K] extends Container<any, any, any> | (new () => any)
+		? T[K]
+		: T[K] extends new (p: infer P) => any
+		? P extends object
+			? T[K]
+			: 'parameter of class must be an object'
+		: 'parameter of class must be an object';
+};
+
 export type DepsToFnContainerData<Deps> = {
 	[K in keyof Deps]:
 		| Container<Deps[K], any, any>
 		| (() => Deps[K])
-		| ((deps: object) => Deps[K]);
+		| ((deps: any) => Deps[K]);
 };
 
 export type DepsToClassContainerData<Deps> = {
 	[K in keyof Deps]:
 		| Container<Deps[K], any, any>
 		| (new () => Deps[K])
-		| (new (deps: object) => Deps[K]);
+		| (new (deps: any) => Deps[K]);
 };
 
 export type OnlyExistedKeys<T extends object, K> = keyof T extends K
