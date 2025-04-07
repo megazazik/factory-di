@@ -212,3 +212,32 @@ export function ofComputedValueWrongParams() {
 		computedValue((dep1: number, dep2: string) => true, 'dep1', 123)
 	);
 }
+
+export function ofComputedValueWithDepsInFirstArg() {
+	expectType<Container<{ value: number }, { dep1: number }, {}>>(
+		computedValue(({ dep1 }: { dep1: number }) => ({ value: dep1 }))
+	);
+
+	expectType<Container<{ value: number }, { dep1?: number | undefined }, {}>>(
+		computedValue(({ dep1 }: { dep1?: number }) => ({ value: dep1 ?? 0 }))
+	);
+
+	expectType<Container<{ value: number }, { dep1: { nested: number } }, {}>>(
+		computedValue(({ dep1 }: { dep1: { nested: number } }) => ({
+			value: dep1.nested,
+		}))
+	);
+
+	expectType<
+		Container<
+			{ value: number; p2: string },
+			{ dep1: number; dep2: string },
+			{}
+		>
+	>(
+		computedValue(({ dep1, dep2 }: { dep1: number; dep2: string }) => ({
+			value: dep1,
+			p2: dep2,
+		}))
+	);
+}
