@@ -151,16 +151,16 @@ export function ofComputedValueObjectTwoDepNoToken() {
 }
 
 export function ofComputedValueWrongParams() {
-	// expectError(
-	// 	computedValue(
-	// 		({ p, p2 }: { p: number; p2: string }) => ({ value: p, p2 }),
-	// 		{
-	// 			p: 'dep1',
-	// 			p2: 'dep2',
-	// 			p3: 'wrong',
-	// 		}
-	// 	)
-	// );
+	expectError(
+		computedValue(
+			({ p, p2 }: { p: number; p2: string }) => ({ value: p, p2 }),
+			{
+				p: 'dep1',
+				p2: 'dep2',
+				p3: 'wrong',
+			}
+		)
+	);
 
 	expectError(
 		computedValue(

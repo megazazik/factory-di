@@ -139,13 +139,13 @@ export function ofComputedValueWrongParams() {
 		constructor(public params: { dep1: number; dep2: string }) {}
 	}
 
-	// expectError(
-	// 	Class(C, {
-	// 		dep1: 'd1',
-	// 		dep2: 'd2',
-	// 		p3: 'wrong',
-	// 	})
-	// );
+	expectError(
+		Class(C, {
+			dep1: 'd1',
+			dep2: 'd2',
+			p3: 'wrong',
+		})
+	);
 
 	expectError(
 		Class(C, {

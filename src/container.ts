@@ -420,7 +420,12 @@ export interface OfFunction {
 
 	<Params extends object, T, const KeysMap extends DependenciesMap<Params>>(
 		c: (params: Params) => T,
-		keys: KeysMap
+		keys: KeysMap &
+			(keyof KeysMap extends keyof Params
+				? {}
+				: `Object has unknown params: ${KeysToStrings<
+						Exclude<keyof KeysMap, keyof Params>
+				  >}`)
 	): ContainerFromParamsAsObject<Params, T, KeysMap>;
 
 	<Params extends [...any[]], T, Keys extends KeysTuple<Params>>(
@@ -493,6 +498,8 @@ export const fn: OfFunction = <T>(
 	}, {}) as Container<T, {}, {}>;
 };
 
+export type KeysToStrings<T> = T extends string ? T : 'Symbol';
+
 export interface OfClass {
 	<T>(c: { new (): T }): Container<T, {}, {}>;
 	<T, Params extends object>(c: { new (params: Params): T }): Container<
@@ -502,7 +509,12 @@ export interface OfClass {
 	>;
 	<Params extends object, T, const KeysMap extends DependenciesMap<Params>>(
 		c: { new (args: Params): T },
-		keys: KeysMap
+		keys: KeysMap &
+			(keyof KeysMap extends keyof Params
+				? {}
+				: `Object has unknown params: ${KeysToStrings<
+						Exclude<keyof KeysMap, keyof Params>
+				  >}`)
 	): ContainerFromParamsAsObject<Params, T, KeysMap>;
 
 	<Params extends [...any[]], T, Keys extends KeysTuple<Params>>(
