@@ -151,6 +151,52 @@ const container = Class(SomeClass, 'dep1', 'dep2')
 	});
 ```
 
+The `registerClasses` method is similar to the `register` method, but it allows registering classes without explicitly declaring their dependencies. Dependencies will be resolved dynamically at runtime using Proxy.
+
+```typescript
+class Database {
+	constructor(private deps: { host: string; password: string }) {}
+}
+
+class UserService {
+	constructor(private deps: { database: Database }) {}
+}
+
+// Create a container
+const container = Class(UserService)
+	// Register class without specifying their dependencies
+	.registerClasses({ database: Database });
+
+// The container will automatically resolve dependencies using Proxy
+const userService = container.resolve({
+	host: 'http://my_host',
+	password: '123456',
+});
+```
+
+The `registerFns` method is similar to the `register` method, but it allows registering functions without explicitly declaring their dependencies. Dependencies will be resolved dynamically at runtime using Proxy.
+
+```typescript
+function createDatabase(deps: { host: string; password: string }): Database {
+	/* ... */
+}
+
+function createUserService(deps: { database: Database }) {
+	/* ... */
+}
+
+// Create a container
+const container = fn(createUserService)
+	// Register function createDatabase without declaring dependencies upfront
+	.registerFns({ database: createDatabase });
+
+// The container will automatically resolve dependencies using Proxy
+const userService = container.resolve({
+	host: 'http://my_host',
+	password: '123456',
+});
+```
+
 If a container has unregistered dependencies you can pass them directly to the `resolve` meethod to create a main value of the container.
 
 ```typescript
@@ -242,7 +288,7 @@ If a dependency is registered in some container then this dependency is applied 
 
 The `Class` function can be used to create containers which create some class instances.
 
-There are two form of the `Class` function.
+There are three form of the `Class` function.
 
 ### Each constructor dependency as a separate argument
 
@@ -351,11 +397,49 @@ const container2 = Class(MyClass, {
 });
 ```
 
-## computedValue
+### Dynamic Class dependency resolution with Proxy
 
-The `computedValue` function can be used to create containers for any computed values.
+The third form allows for dynamic dependency resolution using a Proxy object. This is useful when you want to determine dependencies at runtime rather than declaring them upfront.
 
-There are two form of the `computedValue` function.
+```typescript
+class Database {
+	constructor(private deps: { host: string; password: string }) {}
+}
+
+class UserService {
+	constructor(private deps: { database: Database }) {}
+}
+
+// Create a container without declaring dependencies upfront
+const container = Class(UserService)
+	// Register dependencies as needed
+	.registerClasses({ database: Database });
+
+// The container will automatically resolve dependencies using Proxy
+const userService = container.resolve({
+	host: 'http://my_host',
+	password: '123456',
+});
+```
+
+In this approach:
+
+1. The constructor receives a single object parameter that will be proxied
+2. Dependencies are resolved lazily when they are first accessed
+3. You don't need to declare dependency tokens upfront
+4. The container will automatically handle dependency resolution through the Proxy
+
+This is particularly useful when:
+
+-   You have many dependencies and don't want to list them all
+-   You want to add new dependencies without modifying the container creation
+-   You need dynamic dependency resolution based on runtime conditions
+
+## computedValue (fn)
+
+The `computedValue` function can be used to create containers for any computed values. `fn` is a short alias for `computedValue`.
+
+There are three form of the `computedValue` function.
 
 ### Each computedValue dependency as a separate argument
 
@@ -466,6 +550,44 @@ const container2 = computedValue(
 	}
 );
 ```
+
+### Dynamic computedValue dependency resolution with Proxy
+
+The third form allows for dynamic dependency resolution using a Proxy object. This is useful when you want to determine dependencies at runtime rather than declaring them upfront.
+
+```typescript
+function createDatabase(deps: { host: string; password: string }): Database {
+	/* ... */
+}
+
+function createUserService(deps: { database: Database }) {
+	/* ... */
+}
+
+// Create a container without declaring dependencies upfront
+const container = fn(createUserService)
+	// Register dependencies as needed
+	.registerFns({ database: createDatabase });
+
+// The container will automatically resolve dependencies using Proxy
+const userService = container.resolve({
+	host: 'http://my_host',
+	password: '123456',
+});
+```
+
+In this approach:
+
+1. The function receives a single object parameter that will be proxied
+2. Dependencies are resolved lazily when they are first accessed
+3. You don't need to declare dependency tokens upfront
+4. The container will automatically handle dependency resolution through the Proxy
+
+This is particularly useful when:
+
+-   You have many dependencies and don't want to list them all
+-   You want to add new dependencies without modifying the container creation
+-   You need dynamic dependency resolution based on runtime conditions
 
 ## constant
 
