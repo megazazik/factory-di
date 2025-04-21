@@ -1,3 +1,18 @@
+# [3.1.0-proxies-2.0](https://github.com/megazazik/factory-di/compare/v3.1.0...v3.1.0-proxies-2.0) (2025-04-21)
+
+
+### Bug Fixes
+
+* add strong type check, add unit tests ([bfcae7d](https://github.com/megazazik/factory-di/commit/bfcae7dc67fd2563eebf25423103c8390e68fca5))
+* add strong type checks ([cf3bdcd](https://github.com/megazazik/factory-di/commit/cf3bdcd51fdcdc69a212d48b3eef8d85887fca7b))
+
+
+### Features
+
+* determining container deps via proxy, registerFns, registerClasses methods, fn function ([564c88e](https://github.com/megazazik/factory-di/commit/564c88e49674896515d8a3ba607e328607c46afe))
+
+
+
 # [3.1.0](https://github.com/megazazik/factory-di/compare/v3.0.2...v3.1.0) (2024-09-29)
 
 
