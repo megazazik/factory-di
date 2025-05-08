@@ -54,7 +54,7 @@ export function onComputedValueWithEmptyInterface() {
 	);
 
 	expectType<Container<boolean, { p0: { p?: boolean } }, {}>>(
-		computedValue((p: { p?: boolean }) => true, 'p0')
+		computedValue((p: { p?: boolean }): boolean => true, 'p0')
 	);
 }
 
@@ -154,40 +154,28 @@ export function ofComputedValueWrongParams() {
 	expectError(
 		computedValue(
 			({ p, p2 }: { p: number; p2: string }) => ({ value: p, p2 }),
-			{
-				p: 'dep1',
-				p2: 'dep2',
-				p3: 'wrong',
-			}
+			{ p: 'dep1', p2: 'dep2', p3: 'wrong' }
 		)
 	);
 
 	expectError(
 		computedValue(
 			({ dep1, dep2 }: { dep1: number; dep2: string }) => true,
-			{
-				dep1: true,
-				dep2: constant('sdfsdf'),
-			}
+			{ dep1: true, dep2: constant('sdfsdf') }
 		)
 	);
 
 	expectError(
 		computedValue(
 			({ dep1, dep2 }: { dep1: number; dep2: string }) => true,
-			{
-				dep1: constant('321'),
-				dep2: constant('sdfsdf'),
-			}
+			{ dep1: constant('321'), dep2: constant('sdfsdf') }
 		)
 	);
 
 	expectError(
 		computedValue(
 			({ dep1, dep2 }: { dep1: number; dep2: string }) => true,
-			{
-				dep1: constant(321),
-			}
+			{ dep1: constant(321) }
 		)
 	);
 
@@ -239,5 +227,27 @@ export function ofComputedValueWithDepsInFirstArg() {
 			value: dep1,
 			p2: dep2,
 		}))
+	);
+}
+
+export function ofComputedValueGenerics() {
+	function createFactory<C extends new (...args: any) => any>(
+		Construct: C
+	): (...params: ConstructorParameters<C>) => InstanceType<C> {
+		return () => null as any;
+	}
+
+	class A {
+		constructor(public deps: { dep1: number }) {}
+	}
+
+	const factory = createFactory(A);
+
+	expectType<Container<A, { dep1: number }, {}>>(
+		computedValue(factory, { dep1: 'dep1' })
+	);
+
+	expectType<Container<A, { dep1: number }, {}>>(
+		computedValue(createFactory(A), { dep1: 'dep1' })
 	);
 }

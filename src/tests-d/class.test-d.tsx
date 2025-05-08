@@ -200,3 +200,25 @@ export function ofComputedValueWithDepsInFirstArg() {
 		Class(C2)
 	);
 }
+
+export function ofClassGenerics() {
+	function createFactory<C extends new (...args: any) => any>(
+		Construct: C
+	): new (...params: ConstructorParameters<C>) => InstanceType<C> {
+		return class extends Construct {};
+	}
+
+	class A {
+		constructor(public deps: { dep1: number }) {}
+	}
+
+	const Factory = createFactory(A);
+
+	expectType<Container<A, { dep1: number }, {}>>(
+		Class(Factory, { dep1: 'dep1' })
+	);
+
+	expectType<Container<A, { dep1: number }, {}>>(
+		Class(createFactory(A), { dep1: 'dep1' })
+	);
+}
