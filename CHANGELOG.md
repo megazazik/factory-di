@@ -1,3 +1,12 @@
+# [3.1.0-proxies-2.1](https://github.com/megazazik/factory-di/compare/v3.1.0-proxies-2.0...v3.1.0-proxies-2.1) (2025-05-08)
+
+
+### Bug Fixes
+
+* fix computedValue generics type error ([c47e0dc](https://github.com/megazazik/factory-di/commit/c47e0dc75750c8e78170162cef85ee23ef7c8068))
+
+
+
 # [3.1.0-proxies-2.0](https://github.com/megazazik/factory-di/compare/v3.1.0...v3.1.0-proxies-2.0) (2025-04-21)
 
 
