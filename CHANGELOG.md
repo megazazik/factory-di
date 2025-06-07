@@ -1,3 +1,12 @@
+# [3.1.0-proxies-3.0](https://github.com/megazazik/factory-di/compare/v3.1.0-proxies-2.1...v3.1.0-proxies-3.0) (2025-06-07)
+
+
+### Features
+
+* add proxyFn and proxyClass ([d998eea](https://github.com/megazazik/factory-di/commit/d998eeaba54224cab5136ab4ccec0b78dc72da95))
+
+
+
 # [3.1.0-proxies-2.1](https://github.com/megazazik/factory-di/compare/v3.1.0-proxies-2.0...v3.1.0-proxies-2.1) (2025-05-08)
 
 
