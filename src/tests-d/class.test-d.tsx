@@ -175,32 +175,6 @@ export function ofComputedValueWrongParams() {
 	expectError(Class(C1, 'dep1', 'dep2', 'dep3'));
 }
 
-export function ofComputedValueWithDepsInFirstArg() {
-	class C {
-		constructor(public params: { dep1: number; dep2: string }) {}
-	}
-
-	expectType<Container<C, { dep1: number; dep2: string }, {}>>(Class(C));
-
-	class C1 {
-		constructor(public params: { dep1?: number; dep2: string }) {}
-	}
-
-	expectType<Container<C1, { dep1?: number | undefined; dep2: string }, {}>>(
-		Class(C1)
-	);
-
-	class C2 {
-		constructor(
-			public params: { dep1: { nested: number }; dep2: string }
-		) {}
-	}
-
-	expectType<Container<C2, { dep1: { nested: number }; dep2: string }, {}>>(
-		Class(C2)
-	);
-}
-
 export function ofClassGenerics() {
 	function createFactory<C extends new (...args: any) => any>(
 		Construct: C

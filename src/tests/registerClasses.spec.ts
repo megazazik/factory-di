@@ -1,5 +1,5 @@
 import tape from 'tape';
-import { Container, constant, fn, Class } from '..';
+import { Container, constant, fn, Class, proxyFn } from '..';
 
 class NumberValue {
 	constructor(deps: { numberValue: number }) {
@@ -34,7 +34,7 @@ class CombinedValue {
 }
 
 tape('registerClasses. Basic functionality', (t) => {
-	const container = fn(
+	const container = proxyFn(
 		(deps: { n: NumberValue }) => `value: ${deps.n.getValue()}`
 	);
 
@@ -46,7 +46,7 @@ tape('registerClasses. Basic functionality', (t) => {
 });
 
 tape('registerClasses. With constant container', (t) => {
-	const container = fn(
+	const container = proxyFn(
 		(deps: { n: NumberValue }) => `value: ${deps.n.getValue()}`
 	);
 
@@ -58,7 +58,7 @@ tape('registerClasses. With constant container', (t) => {
 });
 
 tape('registerClasses. With function container', (t) => {
-	const container = fn(
+	const container = proxyFn(
 		(deps: { n: NumberValue }) => `value: ${deps.n.getValue()}`
 	);
 
@@ -70,7 +70,7 @@ tape('registerClasses. With function container', (t) => {
 });
 
 tape('registerClasses. Multiple dependencies', (t) => {
-	const container = fn(
+	const container = proxyFn(
 		(deps: { n: NumberValue; s: StringValue }) =>
 			`${deps.s.getValue()}: ${deps.n.getValue()}`
 	);
@@ -90,7 +90,7 @@ tape('registerClasses. Multiple dependencies', (t) => {
 });
 
 tape('registerClasses. Class with own dependencies', (t) => {
-	const container = fn((deps: { combined: CombinedValue }) =>
+	const container = proxyFn((deps: { combined: CombinedValue }) =>
 		deps.combined.getValue()
 	);
 

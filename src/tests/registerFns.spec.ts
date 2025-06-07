@@ -1,8 +1,8 @@
 import tape from 'tape';
-import { constant, fn } from '..';
+import { constant, fn, proxyFn } from '..';
 
 tape('registerFns. Basic functionality', (t) => {
-	const container = fn((deps: { n: number }) => `value: ${deps.n}`);
+	const container = proxyFn((deps: { n: number }) => `value: ${deps.n}`);
 
 	const result = container.registerFns({ n: () => 123 });
 	t.equal(result.resolve(), 'value: 123');
@@ -10,7 +10,7 @@ tape('registerFns. Basic functionality', (t) => {
 });
 
 tape('registerFns. With constant container', (t) => {
-	const container = fn((deps: { n: number }) => `value: ${deps.n}`);
+	const container = proxyFn((deps: { n: number }) => `value: ${deps.n}`);
 
 	const result = container.registerFns({ n: constant(123) });
 	t.equal(result.resolve(), 'value: 123');
@@ -18,7 +18,7 @@ tape('registerFns. With constant container', (t) => {
 });
 
 tape('registerFns. With function container', (t) => {
-	const container = fn((deps: { n: number }) => `value: ${deps.n}`);
+	const container = proxyFn((deps: { n: number }) => `value: ${deps.n}`);
 
 	const result = container.registerFns({ n: fn(() => 123) });
 	t.equal(result.resolve(), 'value: 123');
@@ -26,7 +26,7 @@ tape('registerFns. With function container', (t) => {
 });
 
 tape('registerFns. Multiple dependencies', (t) => {
-	const container = fn(
+	const container = proxyFn(
 		(deps: { n: number; s: string }) => `${deps.s}: ${deps.n}`
 	);
 
@@ -40,13 +40,13 @@ tape('registerFns. Multiple dependencies', (t) => {
 });
 
 tape('registerFns. Function with own dependencies', (t) => {
-	const container = fn(
+	const container = proxyFn(
 		(deps: { n: number; s: string }) => `${deps.s}: ${deps.n}`
 	);
 
 	const result = container
 		.registerFns({
-			n: fn((deps: { multiplier: number }) => 123 * deps.multiplier),
+			n: proxyFn((deps: { multiplier: number }) => 123 * deps.multiplier),
 			s: (deps: { prefix: string }) => `${deps.prefix}_value`,
 		})
 		.registerFns({

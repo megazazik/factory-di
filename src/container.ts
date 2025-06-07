@@ -190,7 +190,7 @@ export class Container<
 				depKey,
 				deps[depKey] instanceof Container
 					? deps[depKey]
-					: fn(deps[depKey] as any),
+					: proxyFn(deps[depKey] as any),
 			])
 		);
 		return this.register(convertDeps as any);
@@ -217,7 +217,7 @@ export class Container<
 				depKey,
 				deps[depKey] instanceof Container
 					? deps[depKey]
-					: Class(deps[depKey] as any),
+					: proxyClass(deps[depKey] as any),
 			])
 		);
 		return this.register(convertDeps as any);
@@ -409,72 +409,49 @@ export type ContainerFromParamsAsObject<
 			}
 	  >;
 
-export interface OfFunction {
-	<T>(getValue: () => T): Container<T, {}, {}>;
-
+export interface OfProxyFunction {
 	<T, Params extends object>(create: (params: Params) => T): Container<
 		T,
 		Params,
 		{}
 	>;
 
-	<Params extends object, T, const KeysMap extends DependenciesMap<Params>>(
-		c: keyof KeysMap extends keyof Params
+	<
+		Params extends object,
+		T,
+		const ReplaceKeysMap extends Partial<ReplacedKeysMap<Params>>
+	>(
+		c: keyof ReplaceKeysMap extends keyof Params
 			? (params: Params) => T
 			: `Object has unknown params: ${KeysToStrings<
-					Exclude<keyof KeysMap, keyof Params>
+					Exclude<keyof ReplaceKeysMap, keyof Params>
 			  >}`,
-		keys: KeysMap
-	): ContainerFromParamsAsObject<Params, T, KeysMap>;
-
-	<Params extends [...any[]], T, Keys extends KeysTuple<Params>>(
-		c: (...args: Params) => T,
-		...keys: Keys
-	): Container<
-		T,
-		HumanReadableType<DepsFromParamsList<NumberKeysOnly<Keys>, Params>>,
-		{}
-	>;
+		keys: ReplaceKeysMap
+	): ContainerWithReplacedKeys<Params, T, ReplaceKeysMap>;
 }
 
-export const fn: OfFunction = <T>(
+export type ReplacedKeysMap<Params extends object> = {
+	[K in keyof Params]: Key;
+};
+
+export type ContainerWithReplacedKeys<
+	Params extends object,
+	T,
+	ReplaceKeysMap extends Partial<ReplacedKeysMap<Params>>
+> = Container<
+	T,
+	{
+		[K in keyof Params as ReplaceKeysMap[K] extends Key
+			? ReplaceKeysMap[K]
+			: K]: Params[K];
+	},
+	{}
+>;
+
+export const proxyFn: OfProxyFunction = <T>(
 	getValue: (...args: any[]) => T,
-	...argNames: (string | object)[]
+	replacedKeys: Record<Key, Key> = {}
 ) => {
-	if (typeof argNames[0] === 'object') {
-		const registeredDeps = {} as any;
-		Object.entries(argNames[0]).forEach(([key, value]) => {
-			if (typeof value === 'object') {
-				registeredDeps[key] = value;
-			}
-		});
-
-		return Container[constructorSymbol](
-			(resolve: any) =>
-				getValue(
-					getAllKeys(argNames[0]).reduce((prev, key) => {
-						const value = (argNames[0] as any)[key];
-						return Object.assign(prev, {
-							[key]:
-								resolve(typeof value === 'object' ? key : value)
-									?.value ?? undefined,
-						});
-					}, {})
-				),
-			registeredDeps
-		) as Container<T, {}, {}>;
-	}
-
-	if (argNames.length > 0 || getValue.length === 0) {
-		return Container[constructorSymbol](
-			(resolve: any) =>
-				getValue(
-					...argNames.map((k) => resolve(k)?.value ?? undefined)
-				),
-			{}
-		) as Container<T, {}, {}>;
-	}
-
 	return Container[constructorSymbol]((resolve: any) => {
 		const depsMap: Record<Key, any> = {};
 
@@ -487,7 +464,9 @@ export const fn: OfFunction = <T>(
 							return depsMap[prop];
 						}
 
-						const dep = resolve(prop)?.value ?? undefined;
+						const dep =
+							resolve(replacedKeys[prop] ?? prop)?.value ??
+							undefined;
 						depsMap[prop] = dep;
 						return dep;
 					},
@@ -499,67 +478,32 @@ export const fn: OfFunction = <T>(
 
 export type KeysToStrings<T> = T extends string ? T : 'Symbol';
 
-export interface OfClass {
-	<T>(c: { new (): T }): Container<T, {}, {}>;
+export interface OfProxyClass {
 	<T, Params extends object>(c: { new (params: Params): T }): Container<
 		T,
 		Params,
 		{}
 	>;
-	<Params extends object, T, const KeysMap extends DependenciesMap<Params>>(
+
+	<
+		Params extends object,
+		T,
+		const ReplaceKeysMap extends Partial<ReplacedKeysMap<Params>>
+	>(
 		c: { new (args: Params): T },
-		keys: KeysMap &
-			(keyof KeysMap extends keyof Params
+		keys: ReplaceKeysMap &
+			(keyof ReplaceKeysMap extends keyof Params
 				? {}
 				: `Object has unknown params: ${KeysToStrings<
-						Exclude<keyof KeysMap, keyof Params>
+						Exclude<keyof ReplaceKeysMap, keyof Params>
 				  >}`)
-	): ContainerFromParamsAsObject<Params, T, KeysMap>;
-
-	<Params extends [...any[]], T, Keys extends KeysTuple<Params>>(
-		c: { new (...args: Params): T },
-		...keys: Keys
-	): Container<
-		T,
-		HumanReadableType<DepsFromParamsList<NumberKeysOnly<Keys>, Params>>,
-		{}
-	>;
+	): ContainerWithReplacedKeys<Params, T, ReplaceKeysMap>;
 }
 
-export const Class: OfClass = (Constructor: any, ...argNames: string[]) => {
-	if (typeof argNames[0] === 'object') {
-		const registeredDeps = {} as any;
-		Object.entries(argNames[0]).forEach(([key, value]) => {
-			if (typeof value === 'object') {
-				registeredDeps[key] = value;
-			}
-		});
-
-		return Container[constructorSymbol](
-			(resolve: any) =>
-				new Constructor(
-					getAllKeys(argNames[0]).reduce((prev, key) => {
-						const value = (argNames[0] as any)[key];
-						return Object.assign(prev, {
-							[key]:
-								resolve(typeof value === 'object' ? key : value)
-									?.value ?? undefined,
-						});
-					}, {})
-				),
-			registeredDeps
-		);
-	}
-
-	if (argNames.length > 0 || Constructor.length === 0) {
-		return Container[constructorSymbol](
-			(resolve) =>
-				new Constructor(
-					...argNames.map((k) => resolve(k)?.value ?? undefined)
-				),
-			{}
-		);
-	}
+export const proxyClass: OfProxyClass = (
+	Constructor: any,
+	replacedKeys: Record<Key, Key> = {}
+) => {
 	return Container[constructorSymbol]((resolve: any) => {
 		const depsMap: Record<Key, any> = {};
 
@@ -572,7 +516,9 @@ export const Class: OfClass = (Constructor: any, ...argNames: string[]) => {
 							return depsMap[prop];
 						}
 
-						const dep = resolve(prop)?.value ?? undefined;
+						const dep =
+							resolve(replacedKeys[prop] ?? prop)?.value ??
+							undefined;
 						depsMap[prop] = dep;
 						return dep;
 					},
